@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trip Ledger</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧳</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E6ECEF; --paper:#FFFFFF; --ink:#16233A; --muted:#5B6B80; --line:#CBD5DD;
+  --accent:#0E6E62; --accent-soft:#D3EAE6; --on-accent:#FFFFFF;
+  --sun:#D98A16; --sun-soft:#FBEBD2; --danger:#B3402A; --danger-soft:#F6DCD5;
+  --display:'Bricolage Grotesque', 'Avenir Next', system-ui, sans-serif;
+  --body:'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0F1724; --paper:#172234; --ink:#E6ECF2; --muted:#97A6B9; --line:#2A3950;
+    --accent:#45B8A6; --accent-soft:#183B3A; --on-accent:#0F1724;
+    --sun:#F0B355; --sun-soft:#3A2F1C; --danger:#E07A63; --danger-soft:#3D2420;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800}
+h2{font-size:1.35rem;font-weight:700;margin-bottom:12px}
+h3{font-size:1.1rem;font-weight:700}
+p{margin:0 0 .6em}
+.muted{color:var(--muted)} .small{font-size:.85rem}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 20px 80px}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 20px;max-width:1100px;margin:0 auto}
+.brand{font-family:var(--display);font-weight:800;font-size:1.3rem;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:8px}
+.brand svg{width:26px;height:26px}
+nav.main{display:flex;gap:4px;flex-wrap:wrap}
+nav.main a{color:var(--muted);text-decoration:none;padding:7px 12px;border-radius:8px;font-weight:500}
+nav.main a[aria-current="page"]{color:var(--ink);background:var(--paper)}
+
+/* controls */
+button,.btn{font:inherit;font-weight:600;font-size:.92rem;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+button:hover,.btn:hover{border-color:var(--muted)}
+.btn.primary,button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.ghost,button.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.danger,button.danger{color:var(--danger)}
+:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
+input,select,textarea{font:inherit;font-size:.95rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
+textarea{min-height:80px;resize:vertical}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+input[type=range]{padding:0;accent-color:var(--accent)}
+label.f{display:grid;gap:4px;font-size:.85rem;color:var(--muted);font-weight:500}
+.form{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.form .wide{grid-column:1/-1}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.stack>*+*{margin-top:18px}
+
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px}
+.cols{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+
+/* ticket — the signature element */
+.ticket{display:grid;grid-template-columns:1fr 200px;background:var(--paper);border-radius:14px;color:inherit;text-decoration:none;
+  -webkit-mask:radial-gradient(circle 11px at calc(100% - 200px) 0,#0000 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 11px at calc(100% - 200px) 100%,#0000 98%,#000) bottom/100% 51% no-repeat;
+  mask:radial-gradient(circle 11px at calc(100% - 200px) 0,#0000 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 11px at calc(100% - 200px) 100%,#0000 98%,#000) bottom/100% 51% no-repeat}
+.ticket:hover .route{color:var(--accent)}
+.tmain{padding:22px 24px;min-width:0}
+.stub{border-left:2px dashed var(--line);padding:20px;display:flex;flex-direction:column;gap:8px;justify-content:center}
+.route{font-family:var(--display);font-weight:800;font-size:clamp(1.9rem,5vw,3rem);letter-spacing:-.02em;line-height:1;display:flex;align-items:center;gap:.35em;flex-wrap:wrap;margin-bottom:10px;transition:color .15s}
+.route svg{width:.7em;height:.7em;flex:none;color:var(--sun)}
+.countdown{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1}
+.tickets{display:grid;gap:16px}
+.status-tag{display:inline-block;font-size:.78rem;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--muted);margin-left:6px;vertical-align:middle}
+@media (max-width:640px){
+  .ticket{grid-template-columns:1fr;-webkit-mask:none;mask:none}
+  .stub{border-left:none;border-top:2px dashed var(--line)}
+}
+
+.meter{height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.pill{display:inline-block;font-size:.8rem;font-weight:600;padding:3px 10px;border-radius:999px;width:fit-content}
+.pill.ok{background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:var(--sun-soft);color:var(--sun)}
+.pill.bad{background:var(--danger-soft);color:var(--danger)}
+
+.statline{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.statline>div{background:var(--paper);padding:14px 16px}
+.statline b{display:block;font-family:var(--display);font-size:1.45rem;font-weight:700}
+.statline.two{grid-template-columns:1fr 1fr}
+.statline span{font-size:.85rem;color:var(--muted)}
+
+.verdict{font-family:var(--display);font-size:clamp(1.2rem,2.6vw,1.6rem);font-weight:500;line-height:1.3;max-width:34em}
+.verdict strong{font-weight:800}
+
+/* trip tabs */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:18px 0 20px;overflow-x:auto}
+.tabs a{padding:10px 14px;color:var(--muted);text-decoration:none;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
+.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+
+/* tables */
+.scroll{overflow-x:auto}
+table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
+.tbl th{text-align:left;font-weight:600;color:var(--muted);font-size:.8rem;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl td input,.tbl td select{padding:5px 7px}
+.tbl tfoot td{font-weight:700;border-bottom:none}
+.tbl .num{text-align:right}
+.tbl tr.day td{background:var(--bg);font-family:var(--display);font-weight:700;padding:8px 10px}
+.x{border:none;background:none;color:var(--muted);padding:4px 8px;font-size:1.1rem}
+.x:hover{color:var(--danger)}
+
+/* bars */
+.cat{display:grid;grid-template-columns:130px 1fr 90px;gap:10px;align-items:center;font-size:.9rem;margin:6px 0}
+.cat .bar{height:10px;background:var(--bg);border-radius:5px;overflow:hidden}
+.cat .bar i{display:block;height:100%;background:var(--accent)}
+.cat .bar i.t{background:var(--sun)}
+
+/* legs */
+.leg{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px dashed var(--line)}
+.leg:last-child{border-bottom:none}
+.leg .mode{font-size:.8rem;font-weight:600;color:var(--muted);width:78px}
+.leg .pts{font-family:var(--display);font-weight:700;font-size:1.15rem}
+
+.chart{width:100%;height:auto;display:block}
+.chart text{font:11px var(--body);fill:var(--muted)}
+.sliders{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.sliders output{font-weight:700;color:var(--ink)}
+
+.links{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.links a{display:block;padding:14px 16px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink);background:var(--paper)}
+.links a:hover{border-color:var(--accent)}
+.links a b{display:block;font-family:var(--display);font-size:1.1rem}
+.links a span{font-size:.85rem;color:var(--muted)}
+
+.empty{padding:40px 24px;text-align:center;border:2px dashed var(--line);border-radius:14px}
+.note{font-size:.85rem;color:var(--muted);border-left:3px solid var(--sun);padding-left:10px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#/">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
+    Trip Ledger
+  </a>
+  <nav class="main" aria-label="Main">
+    <a href="#/" data-nav="">Trips</a>
+    <a href="#/plan" data-nav="plan">Savings plan</a>
+    <a href="#/search" data-nav="search">Search flights</a>
+    <a href="#/settings" data-nav="settings">Settings</a>
+  </nav>
+</header>
+<main class="wrap" id="app"></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+/* ============ helpers ============ */
+const KEY = 'tripledger.v1';
+const CATS = ['Lodging','Food','Activities','Local transport','Insurance','Visas & fees','Shopping','Other'];
+const MODES = ['Flight','Train','Bus','Car rental','Ferry','Transfer','Other'];
+const STATUSES = ['Idea','Saving','Booked'];
+const CURRENCIES = ['USD','EUR','GBP','CAD','AUD','NZD','JPY','CHF','INR','MXN','BRL','ZAR','SGD','AED','SEK','NOK','DKK','PLN','KRW','CNY'];
+const PLANE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-label="to"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" transform="rotate(90 12 12)"/></svg>';
+
+const app = document.getElementById('app');
+const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const parseD = s => { if (!s) return null; const [y,m,d] = String(s).slice(0,10).split('-').map(Number); return y ? new Date(y, m-1, d) : null; };
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const addMonths = (d, n) => { const x = new Date(d); x.setMonth(x.getMonth() + n); return x; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const monthsUntil = s => { const d = parseD(s); if (!d) return 0; const t = today();
+  let m = (d.getFullYear()-t.getFullYear())*12 + d.getMonth() - t.getMonth(); if (d.getDate() < t.getDate()) m--; return Math.max(0, m); };
+const daysUntil = s => { const d = parseD(s); return d ? Math.round((d - today()) / 864e5) : null; };
+const uid = () => Math.random().toString(36).slice(2, 10);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const sum = (a, f) => (a || []).reduce((s, x) => s + f(x), 0);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = (n, dec = 0) => { try { return new Intl.NumberFormat(undefined, {style:'currency', currency: state.settings.currency, maximumFractionDigits: dec, minimumFractionDigits: dec}).format(n || 0); } catch (e) { return Math.round(n) + ''; } };
+const fmtDate = s => { const d = typeof s === 'string' ? parseD(s) : s; return d ? d.toLocaleDateString(undefined, {day:'numeric', month:'short', year:'numeric'}) : '—'; };
+const fmtDay = d => d.toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short'});
+const fmtMonth = d => d ? d.toLocaleDateString(undefined, {month:'short', year:'numeric'}) : '—';
+const fmtDT = s => { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? s : d.toLocaleString(undefined, {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}); };
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1800); }
+
+/* ============ data ============ */
+function sample(){
+  const t = today();
+  const a = addMonths(t, 6), b = addMonths(t, 13);
+  const d = (base, n) => iso(addDays(base, n));
+  return {
+    settings: { currency: 'USD', pool: 750 },
+    search: { from: 'JFK', to: 'LIS', depart: d(a,0), ret: d(a,10), adults: 2, cabin: 'economy', price: '', carrier: '', trip: '' },
+    trips: [
+      { id: uid(), name: 'Lisbon and Porto', origin: 'JFK', destination: 'LIS', start: d(a,0), end: d(a,10), travelers: 2, status: 'Saving',
+        budget: 5000, saved: 2200, monthly: 450, notes: 'Anniversary trip. Book Sintra tickets a week ahead.',
+        costs: [
+          { id: uid(), category: 'Lodging', label: 'Alfama apartment, 6 nights', estimate: 1150, actual: '', paid: false },
+          { id: uid(), category: 'Lodging', label: 'Porto hotel, 4 nights', estimate: 720, actual: '', paid: false },
+          { id: uid(), category: 'Food', label: 'Meals and cafés', estimate: 900, actual: '', paid: false },
+          { id: uid(), category: 'Activities', label: 'Sintra day trip, tours', estimate: 380, actual: '', paid: false },
+          { id: uid(), category: 'Local transport', label: 'Metro, trams, taxis', estimate: 160, actual: '', paid: false },
+          { id: uid(), category: 'Insurance', label: 'Travel insurance', estimate: 140, actual: 140, paid: true }
+        ],
+        segments: [
+          { id: uid(), mode: 'Flight', carrier: 'TAP', number: 'TP 202', from: 'JFK', to: 'LIS', depart: d(a,0)+'T18:45', arrive: d(a,1)+'T06:55', conf: 'QX7P2L', cost: 1240 },
+          { id: uid(), mode: 'Train', carrier: 'CP Alfa Pendular', number: '125', from: 'Lisbon', to: 'Porto', depart: d(a,6)+'T10:09', arrive: d(a,6)+'T12:58', conf: '', cost: 76 },
+          { id: uid(), mode: 'Flight', carrier: 'TAP', number: 'TP 205', from: 'OPO', to: 'JFK', depart: d(a,10)+'T11:30', arrive: d(a,10)+'T14:20', conf: 'QX7P2L', cost: 0 }
+        ],
+        itinerary: [
+          { id: uid(), date: d(a,1), time: '08:30', title: 'Land, drop bags at apartment', place: 'Alfama', note: '' },
+          { id: uid(), date: d(a,1), time: '20:00', title: 'Fado dinner', place: 'Tasca do Chico', note: 'Reserve' },
+          { id: uid(), date: d(a,2), time: '10:00', title: 'Walk Alfama to Castelo', place: 'São Jorge Castle', note: '' },
+          { id: uid(), date: d(a,3), time: '09:00', title: 'Sintra day trip', place: 'Pena Palace', note: 'Timed tickets' },
+          { id: uid(), date: d(a,6), time: '10:09', title: 'Train to Porto', place: 'Santa Apolónia', note: '' },
+          { id: uid(), date: d(a,7), time: '15:00', title: 'Port lodge tasting', place: 'Vila Nova de Gaia', note: '' }
+        ],
+        sim: null },
+      { id: uid(), name: 'Tokyo and Kyoto', origin: 'SFO', destination: 'HND', start: d(b,0), end: d(b,11), travelers: 1, status: 'Idea',
+        budget: 5200, saved: 600, monthly: 300, notes: '',
+        costs: [
+          { id: uid(), category: 'Lodging', label: 'Hotels, 11 nights', estimate: 1700, actual: '', paid: false },
+          { id: uid(), category: 'Food', label: 'Food', estimate: 900, actual: '', paid: false },
+          { id: uid(), category: 'Activities', label: 'Temples, teamLab, day trips', estimate: 500, actual: '', paid: false },
+          { id: uid(), category: 'Local transport', label: 'Shinkansen and IC card', estimate: 420, actual: '', paid: false },
+          { id: uid(), category: 'Insurance', label: 'Travel insurance', estimate: 110, actual: '', paid: false }
+        ],
+        segments: [
+          { id: uid(), mode: 'Flight', carrier: 'ANA', number: 'NH 107', from: 'SFO', to: 'HND', depart: d(b,0)+'T11:00', arrive: d(b,1)+'T15:25', conf: '', cost: 1350 }
+        ],
+        itinerary: [], sim: null }
+    ]
+  };
+}
+function load(){
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.trips)) return normalize(s); } catch (e) {}
+  return sample();
+}
+function normalize(s){
+  s.settings = Object.assign({ currency: 'USD', pool: 500 }, s.settings || {});
+  s.search = Object.assign({ from:'', to:'', depart:'', ret:'', adults:1, cabin:'economy', price:'', carrier:'', trip:'' }, s.search || {});
+  s.trips.forEach(t => { t.costs ||= []; t.segments ||= []; t.itinerary ||= []; t.id ||= uid(); });
+  return s;
+}
+let state = load();
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+const findTrip = id => state.trips.find(t => t.id === id);
+
+/* ============ calculations ============ */
+const itemValue = c => num(c.actual) > 0 ? num(c.actual) : num(c.estimate);
+function calc(t){
+  const items = sum(t.costs, itemValue);
+  const transport = sum(t.segments, s => num(s.cost));
+  const total = items + transport;
+  const saved = num(t.saved), monthly = num(t.monthly), budget = num(t.budget);
+  const remaining = Math.max(0, total - saved);
+  const months = remaining <= 0 ? 0 : (monthly > 0 ? Math.ceil(remaining / monthly) : Infinity);
+  const monthsLeft = monthsUntil(t.start);
+  const ready = isFinite(months) ? addMonths(today(), months) : null;
+  const needed = remaining <= 0 ? 0 : remaining / Math.max(1, monthsLeft);
+  const pct = total > 0 ? Math.min(100, saved / total * 100) : 0;
+  const shortfall = Math.max(0, remaining - monthly * monthsLeft);
+  const status = total === 0 ? 'none' : remaining <= 0 ? 'funded' : months <= monthsLeft ? 'track' : 'short';
+  return { items, transport, total, saved, monthly, budget, remaining, months, monthsLeft, ready, needed, pct, shortfall, status,
+           overBudget: budget > 0 && total > budget, days: daysUntil(t.start) };
+}
+function payoff(debt, apr, pay){
+  const r = apr / 1200; if (debt <= 0) return { months: 0, interest: 0 };
+  if (pay <= debt * r || pay <= 0) return { months: Infinity, interest: Infinity };
+  let m = 0, i = 0; while (debt > 0.005 && m < 600) { const int = debt * r; i += int; debt = debt + int - pay; m++; }
+  return { months: m, interest: i };
+}
+function statusPill(c){
+  const map = { funded: ['ok','Fully saved'], track: ['ok','On track'], short: ['bad','Behind'], none: ['warn','Add costs'] };
+  const [cls, label] = map[c.status]; return `<span class="pill ${cls}">${label}</span>`;
+}
+
+/* ============ rendering ============ */
+function route(){ return location.hash.replace(/^#\/?/, '').split('/'); }
+function render(){
+  const fid = document.activeElement?.dataset?.fid;
+  const [view, id, tab] = route();
+  document.querySelectorAll('[data-nav]').forEach(a => {
+    const on = a.dataset.nav === (view === 'trip' ? '' : view);
+    on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current');
+  });
+  if (view === 'trip') { const t = findTrip(id); app.innerHTML = t ? viewTrip(t, tab || 'overview') : viewMissing(); }
+  else if (view === 'plan') app.innerHTML = viewPlan();
+  else if (view === 'search') app.innerHTML = viewSearch();
+  else if (view === 'settings') app.innerHTML = viewSettings();
+  else app.innerHTML = viewHome();
+  if (view === 'trip' && tab === 'simulate') updateSim();
+  if (view === 'search') updateLinks();
+  if (fid) { const n = app.querySelector(`[data-fid="${CSS.escape(fid)}"]`); if (n) n.focus(); }
+}
+const viewMissing = () => `<div class="empty"><h2>That trip isn't here</h2><p class="muted">It may have been deleted.</p><a class="btn" href="#/">Back to trips</a></div>`;
+
+/* ---- home ---- */
+function ticket(t){
+  const c = calc(t);
+  const when = c.days == null ? 'Set dates' : c.days < 0 ? 'Done' : c.days;
+  return `<a class="ticket" href="#/trip/${t.id}">
+    <div class="tmain">
+      <div class="route"><span>${esc(t.origin || '???')}</span>${PLANE}<span>${esc(t.destination || '???')}</span></div>
+      <h3>${esc(t.name || 'Untitled trip')} <span class="status-tag">${esc(t.status || 'Idea')}</span></h3>
+      <p class="muted small" style="margin-top:4px">${fmtDate(t.start)} to ${fmtDate(t.end)}, ${plural(num(t.travelers) || 1, 'traveler')}</p>
+    </div>
+    <div class="stub">
+      <div><span class="countdown">${when}</span> <span class="muted small">${c.days != null && c.days >= 0 ? 'days to go' : ''}</span></div>
+      <div class="meter" aria-label="${Math.round(c.pct)}% saved"><i style="width:${c.pct}%"></i></div>
+      <div class="small">${money(c.saved)} of ${money(c.total)}</div>
+      ${statusPill(c)}
+    </div></a>`;
+}
+function viewHome(){
+  const sorted = [...state.trips].sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999'));
+  const upcoming = sorted.filter(t => (daysUntil(t.start) ?? 1) >= 0);
+  const past = sorted.filter(t => (daysUntil(t.start) ?? 1) < 0);
+  const cs = upcoming.map(calc);
+  const head = `<div class="spread" style="margin-bottom:20px"><h1>Your trips</h1><button class="primary" data-act="new-trip">New trip</button></div>`;
+  if (!state.trips.length) return head + `<div class="empty"><h2>No trips yet</h2><p class="muted">Add a trip to track its costs, savings and itinerary.</p><button class="primary" data-act="new-trip">New trip</button> <button data-act="reset-sample">Load example trips</button></div>`;
+  return head + `
+    <div class="statline" style="margin-bottom:22px">
+      <div><b>${upcoming.length}</b><span>Upcoming trips</span></div>
+      <div><b>${money(sum(cs, c => c.total))}</b><span>Projected cost</span></div>
+      <div><b>${money(sum(cs, c => c.saved))}</b><span>Saved so far</span></div>
+      <div><b>${money(sum(cs, c => c.monthly))}</b><span>Saving each month</span></div>
+    </div>
+    <div class="tickets">${upcoming.map(ticket).join('') || '<p class="muted">No upcoming trips.</p>'}</div>
+    ${past.length ? `<h2 style="margin-top:36px">Past trips</h2><div class="tickets">${past.map(ticket).join('')}</div>` : ''}`;
+}
+
+/* ---- trip ---- */
+function viewTrip(t, tab){
+  const tabs = [['overview','Budget and payoff'],['costs','Costs'],['transport','Flights and transport'],['itinerary','Itinerary'],['simulate','Simulate']];
+  const body = { overview: tabOverview, costs: tabCosts, transport: tabTransport, itinerary: tabItinerary, simulate: tabSimulate }[tab] || tabOverview;
+  return `
+    <a href="#/" class="small">All trips</a>
+    <div class="spread" style="margin-top:8px">
+      <div><div class="route" style="margin-bottom:6px"><span>${esc(t.origin || '???')}</span>${PLANE}<span>${esc(t.destination || '???')}</span></div>
+      <h1 style="font-size:1.4rem;font-weight:700">${esc(t.name || 'Untitled trip')}</h1></div>
+      <button class="danger" data-act="del-trip">Delete trip</button>
+    </div>
+    <nav class="tabs" aria-label="Trip sections">${tabs.map(([k, l]) => `<a href="#/trip/${t.id}/${k}" ${k === tab ? 'aria-current="page"' : ''}>${l}</a>`).join('')}</nav>
+    ${body(t)}`;
+}
+const tf = (t, key, label, type = 'text', extra = '') =>
+  `<label class="f">${label}<input type="${type}" data-tf="${key}" data-fid="tf-${key}" value="${esc(t[key])}" ${extra}></label>`;
+
+function tabOverview(t){
+  const c = calc(t), apr = t.sim?.apr ?? 22;
+  let verdict;
+  if (c.total === 0) verdict = `Add costs and bookings to see how long this trip takes to fund.`;
+  else if (c.remaining <= 0) verdict = `<strong>You've saved enough.</strong> ${money(c.saved - c.total)} to spare against a ${money(c.total)} trip.`;
+  else if (!isFinite(c.months)) verdict = `You need <strong>${money(c.remaining)}</strong> more. Set a monthly saving amount to see when you'll get there.`;
+  else {
+    const gap = c.monthsLeft - c.months;
+    verdict = `At ${money(c.monthly)} a month you'll have the remaining <strong>${money(c.remaining)}</strong> by <strong>${fmtMonth(c.ready)}</strong>, ` +
+      (gap >= 0 ? `${gap === 0 ? 'just in time' : plural(gap, 'month') + ' before you leave'}.`
+                : `${plural(-gap, 'month')} after you leave. Save <strong>${money(Math.ceil(c.needed))}</strong> a month to be ready in time.`);
+  }
+  let finance = '';
+  if (c.shortfall > 0 && c.monthsLeft >= 0) {
+    const p = payoff(c.shortfall, apr, c.monthly);
+    finance = `<p class="note" style="margin-top:14px">If you go anyway and put the ${money(c.shortfall)} shortfall on a card at ${apr}% APR, paying ${money(c.monthly)} a month ` +
+      (isFinite(p.months) ? `clears it in ${plural(p.months, 'month')} and costs about ${money(p.interest)} in interest.` : `never clears it. Raise the monthly amount.`) +
+      ` Change the rate on the Simulate tab.</p>`;
+  }
+  const byCat = {}; t.costs.forEach(x => byCat[x.category] = (byCat[x.category] || 0) + itemValue(x));
+  const rows = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+  if (c.transport) rows.unshift(['Flights and transport', c.transport]);
+  const max = Math.max(1, ...rows.map(r => r[1]));
+  return `<div class="stack">
+    <section class="panel">
+      <p class="verdict">${verdict}</p>
+      <div class="meter" style="margin:14px 0 8px;height:10px"><i style="width:${c.pct}%"></i></div>
+      <div class="row small muted"><span>${Math.round(c.pct)}% saved</span>${statusPill(c)}
+        ${c.overBudget ? `<span class="pill warn">${money(c.total - c.budget)} over budget</span>` : ''}</div>
+      ${finance}
+    </section>
+    <div class="cols">
+      <section class="panel"><h2>Money</h2><div class="form">
+        ${tf(t,'budget','Budget','number','min="0" step="50"')}
+        ${tf(t,'saved','Saved so far','number','min="0" step="50"')}
+        ${tf(t,'monthly','Saving per month','number','min="0" step="25"')}
+      </div>
+      <div class="statline two" style="margin-top:16px">
+        <div><b>${money(c.total)}</b><span>Projected cost</span></div>
+        <div><b>${money(c.remaining)}</b><span>Still to save</span></div>
+        <div><b>${isFinite(c.months) ? plural(c.months, 'month') : '—'}</b><span>To fully fund</span></div>
+        <div><b>${money(Math.ceil(c.needed))}</b><span>Monthly to be ready</span></div>
+      </div></section>
+      <section class="panel"><h2>Where the money goes</h2>
+        ${rows.length ? rows.map(([k, v]) => `<div class="cat"><span>${esc(k)}</span><div class="bar"><i class="${k === 'Flights and transport' ? 't' : ''}" style="width:${v / max * 100}%"></i></div><span class="num" style="text-align:right">${money(v)}</span></div>`).join('')
+          : '<p class="muted">No costs yet. Add them on the Costs tab.</p>'}
+        ${c.total && num(t.travelers) > 1 ? `<p class="small muted" style="margin-top:12px">${money(c.total / num(t.travelers))} per traveler.</p>` : ''}
+      </section>
+    </div>
+    <section class="panel"><h2>Trip details</h2><div class="form">
+      ${tf(t,'name','Trip name')}
+      ${tf(t,'origin','From')}
+      ${tf(t,'destination','To')}
+      ${tf(t,'start','Leave','date')}
+      ${tf(t,'end','Return','date')}
+      ${tf(t,'travelers','Travelers','number','min="1"')}
+      <label class="f">Status<select data-tf="status" data-fid="tf-status">${STATUSES.map(s => `<option ${s === t.status ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+      <label class="f wide">Notes<textarea data-tf="notes" data-fid="tf-notes">${esc(t.notes)}</textarea></label>
+    </div></section>
+  </div>`;
+}
+
+const cell = (coll, it, key, type = 'text', extra = '') =>
+  `<input type="${type}" data-coll="${coll}" data-id="${it.id}" data-k="${key}" data-fid="${coll}-${it.id}-${key}" value="${esc(it[key])}" ${extra} aria-label="${key}">`;
+const sel = (coll, it, key, opts) =>
+  `<select data-coll="${coll}" data-id="${it.id}" data-k="${key}" data-fid="${coll}-${it.id}-${key}" aria-label="${key}">${opts.map(o => `<option ${o === it[key] ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+
+function tabCosts(t){
+  const c = calc(t);
+  return `<section class="panel">
+    <div class="spread" style="margin-bottom:12px"><h2 style="margin:0">Costs</h2><button class="primary" data-act="add-row" data-coll="costs">Add cost</button></div>
+    <div class="scroll"><table class="tbl">
+      <thead><tr><th>Category</th><th>Item</th><th class="num">Estimate</th><th class="num">Actual</th><th>Paid</th><th></th></tr></thead>
+      <tbody>${t.costs.map(it => `<tr>
+        <td style="min-width:140px">${sel('costs', it, 'category', CATS)}</td>
+        <td style="min-width:200px">${cell('costs', it, 'label')}</td>
+        <td style="min-width:100px">${cell('costs', it, 'estimate', 'number', 'min="0" step="10"')}</td>
+        <td style="min-width:100px">${cell('costs', it, 'actual', 'number', 'min="0" step="10" placeholder="—"')}</td>
+        <td><input type="checkbox" data-coll="costs" data-id="${it.id}" data-k="paid" data-fid="costs-${it.id}-paid" ${it.paid ? 'checked' : ''} aria-label="paid"></td>
+        <td><button class="x" data-act="del-row" data-coll="costs" data-id="${it.id}" aria-label="Delete cost">×</button></td></tr>`).join('')
+        || '<tr><td colspan="6" class="muted">No costs yet.</td></tr>'}</tbody>
+      <tfoot>
+        <tr><td colspan="2">Costs</td><td colspan="2" class="num">${money(c.items)}</td><td colspan="2"></td></tr>
+        <tr><td colspan="2" class="muted" style="font-weight:500">Flights and transport (from that tab)</td><td colspan="2" class="num muted">${money(c.transport)}</td><td colspan="2"></td></tr>
+        <tr><td colspan="2">Projected total</td><td colspan="2" class="num">${money(c.total)}</td><td colspan="2"></td></tr>
+      </tfoot></table></div>
+    <p class="note" style="margin-top:14px">When you enter an actual amount it replaces the estimate in every total. Items marked paid are held fixed in simulations.</p>
+  </section>`;
+}
+
+function duration(a, b){
+  const d1 = new Date(a), d2 = new Date(b); if (isNaN(d1) || isNaN(d2) || d2 <= d1) return '';
+  const m = Math.round((d2 - d1) / 6e4); return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
+}
+function tabTransport(t){
+  const segs = [...t.segments].sort((a, b) => (a.depart || '').localeCompare(b.depart || ''));
+  return `<div class="stack">
+    <section class="panel">
+      <div class="spread" style="margin-bottom:6px"><h2 style="margin:0">Journey</h2>
+        <div class="row"><a class="btn" href="#/search" data-act="search-from-trip">Search fares</a><button class="primary" data-act="add-row" data-coll="segments">Add leg</button></div></div>
+      ${segs.length ? segs.map(s => `<div class="leg">
+        <span class="mode">${esc(s.mode)}<br>${esc(s.carrier)} ${esc(s.number)}</span>
+        <div><div class="pts">${esc(s.from || '?')} to ${esc(s.to || '?')}</div>
+          <div class="small muted">${fmtDT(s.depart)} to ${fmtDT(s.arrive)}${duration(s.depart, s.arrive) ? ', ' + duration(s.depart, s.arrive) : ''}${s.conf ? ', ref ' + esc(s.conf) : ''}</div></div>
+        <b>${num(s.cost) ? money(num(s.cost)) : ''}</b></div>`).join('') : '<p class="muted">No flights or transport yet.</p>'}
+    </section>
+    <section class="panel"><h2>Edit legs</h2>
+      <div class="scroll"><table class="tbl">
+        <thead><tr><th>Type</th><th>Carrier</th><th>Number</th><th>From</th><th>To</th><th>Departs</th><th>Arrives</th><th>Booking ref</th><th class="num">Cost</th><th></th></tr></thead>
+        <tbody>${segs.map(s => `<tr>
+          <td style="min-width:110px">${sel('segments', s, 'mode', MODES)}</td>
+          <td style="min-width:110px">${cell('segments', s, 'carrier')}</td>
+          <td style="min-width:80px">${cell('segments', s, 'number')}</td>
+          <td style="min-width:80px">${cell('segments', s, 'from')}</td>
+          <td style="min-width:80px">${cell('segments', s, 'to')}</td>
+          <td style="min-width:190px">${cell('segments', s, 'depart', 'datetime-local')}</td>
+          <td style="min-width:190px">${cell('segments', s, 'arrive', 'datetime-local')}</td>
+          <td style="min-width:100px">${cell('segments', s, 'conf')}</td>
+          <td style="min-width:100px">${cell('segments', s, 'cost', 'number', 'min="0" step="10"')}</td>
+          <td><button class="x" data-act="del-row" data-coll="segments" data-id="${s.id}" aria-label="Delete leg">×</button></td></tr>`).join('')
+          || '<tr><td colspan="10" class="muted">Add a leg to start.</td></tr>'}</tbody></table></div>
+      <p class="note" style="margin-top:14px">Times are local. Durations ignore time-zone changes, so long-haul flights may look longer or shorter than they are. Leg costs count toward the trip total.</p>
+    </section></div>`;
+}
+
+function tabItinerary(t){
+  const items = [...t.itinerary].sort((a, b) => ((a.date || '') + (a.time || '')).localeCompare((b.date || '') + (b.time || '')));
+  const start = parseD(t.start); let last = null, rows = '';
+  items.forEach(it => {
+    if (it.date !== last) {
+      last = it.date; const d = parseD(it.date);
+      const n = d && start ? Math.round((d - start) / 864e5) + 1 : null;
+      rows += `<tr class="day"><td colspan="5">${n ? `Day ${n}, ` : ''}${d ? fmtDay(d) : 'No date'}</td></tr>`;
+    }
+    rows += `<tr>
+      <td style="min-width:150px">${cell('itinerary', it, 'date', 'date')}</td>
+      <td style="min-width:110px">${cell('itinerary', it, 'time', 'time')}</td>
+      <td style="min-width:200px">${cell('itinerary', it, 'title', 'text', 'placeholder="What"')}</td>
+      <td style="min-width:150px">${cell('itinerary', it, 'place', 'text', 'placeholder="Where"')}</td>
+      <td style="min-width:150px"><div class="row" style="flex-wrap:nowrap">${cell('itinerary', it, 'note', 'text', 'placeholder="Note"')}<button class="x" data-act="del-row" data-coll="itinerary" data-id="${it.id}" aria-label="Delete item">×</button></div></td></tr>`;
+  });
+  return `<section class="panel">
+    <div class="spread" style="margin-bottom:12px"><h2 style="margin:0">Itinerary</h2>
+      <div class="row"><button data-act="fill-days">Add a row for each day</button><button class="primary" data-act="add-row" data-coll="itinerary">Add activity</button></div></div>
+    <div class="scroll"><table class="tbl">
+      <thead><tr><th>Date</th><th>Time</th><th>Activity</th><th>Place</th><th>Note</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="5" class="muted">Nothing planned yet. Add activities or a row for each day of the trip.</td></tr>'}</tbody></table></div>
+  </section>`;
+}
+
+/* ---- simulate ---- */
+function simParams(t){
+  if (!t.sim) t.sim = { saved: num(t.saved), monthly: num(t.monthly), change: 0, apr: 22, spread: 15 };
+  return t.sim;
+}
+function tabSimulate(t){
+  const s = simParams(t);
+  const slider = (k, label, min, max, step, f) =>
+    `<label class="f">${label} <output id="o-${k}">${f(s[k])}</output><input type="range" data-sim="${k}" min="${min}" max="${max}" step="${step}" value="${s[k]}"></label>`;
+  const c = calc(t), cap = Math.max(2000, Math.ceil(c.total * 1.2 / 500) * 500);
+  return `<div class="stack">
+    <section class="panel">
+      <div class="spread" style="margin-bottom:14px"><h2 style="margin:0">What if?</h2>
+        <div class="row"><button data-act="sim-reset">Reset to trip values</button><button class="primary" data-act="sim-apply">Use these savings figures</button></div></div>
+      <div class="sliders">
+        ${slider('saved', 'Saved now', 0, cap, 50, money)}
+        ${slider('monthly', 'Saving per month', 0, Math.max(2000, num(t.monthly) * 3), 25, money)}
+        ${slider('change', 'Prices change by', -30, 50, 1, v => (v > 0 ? '+' : '') + v + '%')}
+        ${slider('apr', 'Card interest (APR)', 0, 36, 0.5, v => v + '%')}
+        ${slider('spread', 'Cost uncertainty', 0, 50, 1, v => '±' + v + '%')}
+      </div>
+    </section>
+    <section class="panel"><h2>Savings and payoff over time</h2><div id="sim-path"></div></section>
+    <section class="panel"><h2>Chance you're fully saved by departure</h2><div id="sim-mc"></div></section>
+  </div>`;
+}
+function simTotal(t, s){
+  const fixed = sum(t.segments, x => num(x.cost)) + sum(t.costs.filter(x => x.paid), itemValue);
+  return fixed + sum(t.costs.filter(x => !x.paid), itemValue) * (1 + s.change / 100);
+}
+function runPath(s, total, monthsLeft){
+  const pts = []; let bal = s.saved, m = 0;
+  for (; m < monthsLeft; m++) { pts.push({ m, v: bal }); bal += s.monthly; }
+  pts.push({ m, v: bal }); const atTrip = bal; bal -= total; pts.push({ m, v: bal });
+  const r = s.apr / 1200; let interest = 0, freeAt = bal >= 0 ? m : null;
+  if (bal < 0) {
+    const never = s.monthly <= -bal * r;
+    for (let k = 0; bal < 0 && k < (never ? 24 : 600); k++) { m++; const i = -bal * r; interest += i; bal = bal - i + s.monthly; pts.push({ m, v: bal }); }
+    freeAt = bal >= 0 ? m : Infinity;
+  }
+  for (let k = 0; k < 3 && isFinite(freeAt); k++) { m++; bal += s.monthly; pts.push({ m, v: bal }); }
+  return { pts, tripMonth: monthsLeft, atTrip, afterTrip: atTrip - total, interest, freeAt };
+}
+function gauss(){ let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function monteCarlo(t, s){
+  const runs = 3000, spread = s.spread / 100, chg = 1 + s.change / 100;
+  const fixed = sum(t.segments, x => num(x.cost)) + sum(t.costs.filter(x => x.paid), itemValue);
+  const open = t.costs.filter(x => !x.paid).map(itemValue);
+  const avail = s.saved + s.monthly * monthsUntil(t.start);
+  const totals = []; let ok = 0;
+  for (let i = 0; i < runs; i++) {
+    let tot = fixed; for (const v of open) tot += v * chg * Math.max(0.3, 1 + spread * gauss());
+    totals.push(tot); if (avail >= tot) ok++;
+  }
+  totals.sort((a, b) => a - b);
+  const q = p => totals[Math.min(runs - 1, Math.floor(runs * p))];
+  return { totals, avail, prob: ok / runs, p10: q(.1), p50: q(.5), p90: q(.9) };
+}
+function updateSim(){
+  const [, id] = route(); const t = findTrip(id); if (!t) return;
+  const s = simParams(t), total = simTotal(t, s), ml = monthsUntil(t.start);
+  const r = runPath(s, total, ml);
+  const depart = addMonths(today(), ml);
+  let story = `<p>By departure in <b>${fmtMonth(depart)}</b> you'll have <b>${money(r.atTrip)}</b> against a <b>${money(total)}</b> trip.</p>`;
+  if (r.afterTrip >= 0) story += `<p>You'll come home with <b>${money(r.afterTrip)}</b> left over.</p>`;
+  else if (!isFinite(r.freeAt)) story += `<p>That leaves <b>${money(-r.afterTrip)}</b> on a card. At ${money(s.monthly)} a month the interest outpaces your payments, so the balance never clears. Raise the monthly amount.</p>`;
+  else story += `<p>That leaves <b>${money(-r.afterTrip)}</b> to cover. Paying ${money(s.monthly)} a month at ${s.apr}% APR clears it by <b>${fmtMonth(addMonths(today(), r.freeAt))}</b> and costs <b>${money(r.interest)}</b> in interest.</p>`;
+  document.getElementById('sim-path').innerHTML = lineChart(r.pts, r.tripMonth) + `<div style="margin-top:12px">${story}</div>`;
+
+  const mc = monteCarlo(t, s);
+  const pct = Math.round(mc.prob * 100);
+  document.getElementById('sim-mc').innerHTML =
+    `<p class="verdict"><strong>${pct}%</strong> of 3,000 simulated trips cost less than the ${money(mc.avail)} you'll have saved by departure.</p>` +
+    histogram(mc) +
+    `<div class="statline two" style="margin-top:14px">
+      <div><b>${money(mc.p10)}</b><span>Cheap case (1 in 10)</span></div>
+      <div><b>${money(mc.p50)}</b><span>Typical cost</span></div>
+      <div><b>${money(mc.p90)}</b><span>Expensive case (1 in 10)</span></div>
+      <div><b>${money(Math.max(0, mc.p90 - mc.avail))}</b><span>Buffer for the expensive case</span></div>
+    </div>
+    <p class="note" style="margin-top:14px">Each run varies every unpaid cost by the uncertainty you set. Booked transport and items marked paid are held fixed.</p>`;
+}
+
+/* ---- charts ---- */
+function lineChart(pts, tripMonth){
+  const W = 680, H = 240, P = { l: 64, r: 14, t: 16, b: 28 };
+  const xmax = Math.max(1, ...pts.map(p => p.m));
+  let ymin = Math.min(0, ...pts.map(p => p.v)), ymax = Math.max(0, ...pts.map(p => p.v));
+  if (ymax === ymin) ymax = ymin + 1; const pad = (ymax - ymin) * .08; ymax += pad; if (ymin < 0) ymin -= pad;
+  const X = m => P.l + m / xmax * (W - P.l - P.r), Y = v => P.t + (ymax - v) / (ymax - ymin) * (H - P.t - P.b);
+  const d = pts.map((p, i) => (i ? 'L' : 'M') + X(p.m).toFixed(1) + ' ' + Y(p.v).toFixed(1)).join('');
+  const y0 = Y(0), area = d + `L${X(pts.at(-1).m).toFixed(1)} ${y0}L${X(pts[0].m).toFixed(1)} ${y0}Z`;
+  let grid = '';
+  for (let i = 0; i <= 4; i++) { const v = ymin + (ymax - ymin) * i / 4, y = Y(v);
+    grid += `<line x1="${P.l}" x2="${W - P.r}" y1="${y}" y2="${y}" style="stroke:var(--line)" stroke-width="1"/><text x="${P.l - 8}" y="${y + 4}" text-anchor="end">${money(v)}</text>`; }
+  const step = Math.max(1, Math.ceil(xmax / 6));
+  for (let m = 0; m <= xmax; m += step) grid += `<text x="${X(m)}" y="${H - 8}" text-anchor="${m === 0 ? 'start' : X(m) > W - 40 ? 'end' : 'middle'}">${fmtMonth(addMonths(today(), m))}</text>`;
+  const tx = X(tripMonth);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Balance over time: savings rise until departure, then drop by the trip cost">
+    <defs><clipPath id="cpA"><rect x="0" y="0" width="${W}" height="${Math.max(0, y0)}"/></clipPath><clipPath id="cpB"><rect x="0" y="${y0}" width="${W}" height="${Math.max(0, H - y0)}"/></clipPath></defs>
+    ${grid}
+    <path d="${area}" style="fill:var(--accent)" opacity=".18" clip-path="url(#cpA)"/>
+    <path d="${area}" style="fill:var(--danger)" opacity=".22" clip-path="url(#cpB)"/>
+    <line x1="${P.l}" x2="${W - P.r}" y1="${y0}" y2="${y0}" style="stroke:var(--muted)" stroke-width="1"/>
+    <line x1="${tx}" x2="${tx}" y1="${P.t}" y2="${H - P.b}" style="stroke:var(--sun)" stroke-width="2" stroke-dasharray="4 4"/>
+    <text x="${tx > W - 90 ? tx - 6 : tx + 6}" y="${P.t + 10}" text-anchor="${tx > W - 90 ? 'end' : 'start'}" style="fill:var(--sun);font-weight:600">Departure</text>
+    <path d="${d}" fill="none" style="stroke:var(--ink)" stroke-width="2.2" stroke-linejoin="round"/>
+  </svg>`;
+}
+function histogram(mc){
+  const W = 680, H = 170, P = { l: 10, r: 10, t: 10, b: 26 }, bins = 30;
+  const lo = Math.min(mc.totals[0], mc.avail), hi = Math.max(mc.totals.at(-1), mc.avail) + 1;
+  const bw = (hi - lo) / bins, counts = new Array(bins).fill(0);
+  mc.totals.forEach(v => counts[Math.min(bins - 1, Math.floor((v - lo) / bw))]++);
+  const cmax = Math.max(...counts), X = v => P.l + (v - lo) / (hi - lo) * (W - P.l - P.r), bwPx = (W - P.l - P.r) / bins;
+  const bars = counts.map((n, i) => { const x0 = lo + i * bw, h = n / cmax * (H - P.t - P.b);
+    return `<rect x="${X(x0) + 1}" y="${H - P.b - h}" width="${Math.max(1, bwPx - 2)}" height="${h}" rx="2" style="fill:${x0 + bw <= mc.avail ? 'var(--accent)' : 'var(--danger)'}" opacity=".75"/>`; }).join('');
+  const ax = X(mc.avail);
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Distribution of simulated trip costs compared with money saved by departure">${bars}
+    <line x1="${ax}" x2="${ax}" y1="${P.t}" y2="${H - P.b}" style="stroke:var(--sun)" stroke-width="2" stroke-dasharray="4 4"/>
+    <text x="${Math.min(ax + 6, W - 160)}" y="${P.t + 12}" style="fill:var(--sun);font-weight:600">Saved by departure</text>
+    <text x="${P.l}" y="${H - 6}">${money(lo)}</text><text x="${W - P.r}" y="${H - 6}" text-anchor="end">${money(hi)}</text></svg>`;
+}
+
+/* ---- savings plan across all trips ---- */
+function planAll(pool){
+  const st = state.trips.filter(t => (daysUntil(t.start) ?? 1) >= 0)
+    .sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999'))
+    .map(t => { const c = calc(t); return { t, c, funded: c.saved, doneM: c.saved >= c.total ? 0 : null }; });
+  for (let m = 1; m <= 360 && pool > 0 && st.some(x => x.doneM == null); m++) {
+    let a = pool;
+    for (const x of st) { if (x.doneM != null) continue; const g = Math.min(x.c.total - x.funded, a); x.funded += g; a -= g;
+      if (x.funded >= x.c.total - 0.01) x.doneM = m; if (a <= 0) break; }
+  }
+  return st;
+}
+function viewPlan(){
+  const pool = num(state.settings.pool);
+  const st = planAll(pool);
+  const head = `<h1>Savings plan</h1><p class="muted" style="max-width:60ch;margin-top:8px">One shared monthly amount, put toward your trips in departure order. Each trip's current savings count first; once a trip is fully covered, the money moves to the next one.</p>`;
+  if (!st.length) return head + `<div class="empty" style="margin-top:20px"><p>No upcoming trips to plan for.</p><a class="btn primary" href="#/">Go to trips</a></div>`;
+  const W = 680, rowH = 46, P = { l: 150, r: 20, t: 26 };
+  const horizon = Math.max(6, ...st.map(x => Math.max(x.c.monthsLeft, isFinite(x.doneM ?? Infinity) ? x.doneM : x.c.monthsLeft + 6))) + 1;
+  const X = m => P.l + Math.min(m, horizon) / horizon * (W - P.l - P.r);
+  const H = P.t + st.length * rowH + 10;
+  let svg = '';
+  const step = Math.max(1, Math.ceil(horizon / 6));
+  for (let m = 0; m <= horizon; m += step) svg += `<line x1="${X(m)}" x2="${X(m)}" y1="${P.t - 6}" y2="${H - 10}" style="stroke:var(--line)"/><text x="${X(m)}" y="${P.t - 10}" text-anchor="middle">${fmtMonth(addMonths(today(), m))}</text>`;
+  st.forEach((x, i) => {
+    const y = P.t + i * rowH + 10, done = x.doneM == null ? horizon : x.doneM, dep = x.c.monthsLeft;
+    const name = (x.t.name || 'Untitled').slice(0, 20);
+    svg += `<text x="0" y="${y + 14}" style="fill:var(--ink);font-weight:600;font-size:13px">${esc(name)}</text>`;
+    svg += `<rect x="${X(0)}" y="${y + 2}" width="${Math.max(2, X(Math.min(done, dep)) - X(0))}" height="16" rx="3" style="fill:var(--accent)" opacity=".8"/>`;
+    if (done > dep) svg += `<rect x="${X(dep)}" y="${y + 2}" width="${Math.max(2, X(done) - X(dep))}" height="16" rx="3" style="fill:var(--danger)" opacity=".7"/>`;
+    svg += `<path d="M${X(dep)} ${y - 3}l6 13l-6 13l-6-13z" style="fill:var(--sun)"/>`;
+  });
+  return head + `
+    <section class="panel" style="margin-top:20px">
+      <div class="form" style="max-width:420px"><label class="f">Total you can save each month<input type="number" min="0" step="25" data-setting="pool" data-fid="set-pool" value="${pool}"></label></div>
+      <p class="small muted" style="margin-top:8px">Your trips list ${money(sum(st, x => x.c.monthly))} a month in total.</p>
+    </section>
+    <section class="panel" style="margin-top:18px"><h2>Timeline</h2>
+      <div class="scroll"><svg class="chart" viewBox="0 0 ${W} ${H}" style="min-width:560px" role="img" aria-label="Funding timeline per trip">${svg}</svg></div>
+      <p class="small muted" style="margin-top:8px"><span style="color:var(--accent)">■</span> saving before departure <span style="color:var(--danger);margin-left:12px">■</span> still paying after you've left <span style="color:var(--sun);margin-left:12px">◆</span> departure</p>
+    </section>
+    <section class="panel" style="margin-top:18px"><div class="scroll"><table class="tbl">
+      <thead><tr><th>Trip</th><th>Departs</th><th class="num">Cost</th><th>Fully covered by</th><th>Status</th></tr></thead>
+      <tbody>${st.map(x => { const late = x.doneM == null || x.doneM > x.c.monthsLeft;
+        return `<tr><td><a href="#/trip/${x.t.id}">${esc(x.t.name || 'Untitled')}</a></td><td>${fmtDate(x.t.start)}</td><td class="num">${money(x.c.total)}</td>
+          <td>${x.doneM == null ? 'Not within 30 years' : x.doneM === 0 ? 'Already' : fmtMonth(addMonths(today(), x.doneM))}</td>
+          <td>${late ? `<span class="pill bad">Short at departure</span>` : `<span class="pill ok">Ready in time</span>`}</td></tr>`; }).join('')}</tbody></table></div></section>`;
+}
+
+/* ---- flight search ---- */
+function viewSearch(){
+  const s = state.search;
+  const f = (k, label, type = 'text', extra = '') => `<label class="f">${label}<input type="${type}" data-search="${k}" data-fid="s-${k}" value="${esc(s[k])}" ${extra}></label>`;
+  return `<h1>Search flights</h1>
+    <p class="muted" style="max-width:62ch;margin-top:8px">Fill this in once and open the same search on several sites. Airport codes (JFK, LIS) work best. When you find a fare, log it to a trip so it counts toward the budget.</p>
+    <section class="panel" style="margin-top:20px">
+      <div class="form">
+        <label class="f">Fill from a trip<select data-act-change="prefill" data-fid="s-prefill"><option value="">Choose a trip</option>${state.trips.map(t => `<option value="${t.id}">${esc(t.name || 'Untitled')}</option>`).join('')}</select></label>
+        ${f('from', 'From')}${f('to', 'To')}
+        ${f('depart', 'Depart', 'date')}${f('ret', 'Return (optional)', 'date')}
+        ${f('adults', 'Adults', 'number', 'min="1" max="9"')}
+        <label class="f">Cabin<select data-search="cabin" data-fid="s-cabin">${[['economy','Economy'],['premium','Premium economy'],['business','Business'],['first','First']].map(([v, l]) => `<option value="${v}" ${v === s.cabin ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      </div>
+    </section>
+    <section style="margin-top:18px"><div class="links" id="links"></div></section>
+    <section class="panel" style="margin-top:18px"><h2>Log a fare you found</h2>
+      <div class="form">
+        ${f('carrier', 'Airline and flight')}
+        ${f('price', 'Total price', 'number', 'min="0" step="1"')}
+        <label class="f">Add to trip<select data-search="trip" data-fid="s-trip"><option value="">Choose a trip</option>${state.trips.map(t => `<option value="${t.id}" ${t.id === s.trip ? 'selected' : ''}>${esc(t.name || 'Untitled')}</option>`).join('')}</select></label>
+        <div style="align-self:end"><button class="primary" data-act="log-fare">Add to trip</button></div>
+      </div>
+    </section>`;
+}
+function flightLinks(s){
+  const from = (s.from || '').trim(), to = (s.to || '').trim();
+  if (!from || !to || !s.depart) return null;
+  const F = from.toUpperCase(), T = to.toUpperCase(), adults = Math.max(1, num(s.adults) || 1);
+  const yymmdd = d => d.slice(2).replace(/-/g, '');
+  const cabinName = { economy: 'economy', premium: 'premium economy', business: 'business', first: 'first' }[s.cabin];
+  const google = 'https://www.google.com/travel/flights?q=' + encodeURIComponent(`Flights from ${from} to ${to} on ${s.depart}${s.ret ? ' through ' + s.ret : ' one way'} ${adults} adults ${cabinName} class`);
+  const sky = `https://www.skyscanner.com/transport/flights/${encodeURIComponent(from.toLowerCase())}/${encodeURIComponent(to.toLowerCase())}/${yymmdd(s.depart)}/${s.ret ? yymmdd(s.ret) + '/' : ''}?adultsv2=${adults}&cabinclass=${{ economy: 'economy', premium: 'premiumeconomy', business: 'business', first: 'first' }[s.cabin]}`;
+  const kayak = `https://www.kayak.com/flights/${encodeURIComponent(F)}-${encodeURIComponent(T)}/${s.depart}${s.ret ? '/' + s.ret : ''}${s.cabin !== 'economy' ? '/' + s.cabin : ''}${adults > 1 ? '/' + adults + 'adults' : ''}?sort=bestflight_a`;
+  const r2r = `https://www.rome2rio.com/map/${encodeURIComponent(from)}/${encodeURIComponent(to)}`;
+  return [['Google Flights', 'Price calendar and tracking', google], ['Skyscanner', 'Compares many agencies', sky], ['Kayak', 'Filters and price forecast', kayak], ['Rome2Rio', 'Trains, buses and ferries too', r2r]];
+}
+function updateLinks(){
+  const el = document.getElementById('links'); if (!el) return;
+  const L = flightLinks(state.search);
+  el.innerHTML = L ? L.map(([n, d, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener"><b>${n}</b><span>${d}</span></a>`).join('')
+    : '<p class="muted">Enter where from, where to and a departure date to get search links.</p>';
+}
+
+/* ---- settings ---- */
+function viewSettings(){
+  return `<h1>Settings</h1>
+    <section class="panel" style="margin-top:20px"><h2>Currency</h2>
+      <div class="form" style="max-width:300px"><label class="f">Show amounts in<select data-setting="currency" data-fid="set-cur">${CURRENCIES.map(c => `<option ${c === state.settings.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
+      <p class="small muted" style="margin-top:8px">This changes the symbol only; amounts aren't converted.</p></section>
+    <section class="panel" style="margin-top:18px"><h2>Your data</h2>
+      <p class="muted" style="max-width:62ch">Trips are saved in this browser only. Export a backup to move them to another device or browser.</p>
+      <div class="row" style="margin-top:12px"><button class="primary" data-act="export">Export backup</button><button data-act="import">Import backup</button></div></section>
+    <section class="panel" style="margin-top:18px"><h2>Start over</h2>
+      <div class="row"><button data-act="reset-sample">Replace with example trips</button><button class="danger" data-act="clear-all">Delete all trips</button></div></section>`;
+}
+
+/* ============ events ============ */
+function commit(){ save(); render(); }
+app.addEventListener('change', e => {
+  const el = e.target, [view, id] = route(), t = view === 'trip' ? findTrip(id) : null;
+  const val = el.type === 'number' ? (el.value === '' ? '' : num(el.value)) : el.type === 'checkbox' ? el.checked : el.value;
+  if (el.dataset.tf && t) { t[el.dataset.tf] = val; commit(); }
+  else if (el.dataset.coll && t) { const it = t[el.dataset.coll].find(x => x.id === el.dataset.id); if (it) { it[el.dataset.k] = val; commit(); } }
+  else if (el.dataset.setting) { state.settings[el.dataset.setting] = val; commit(); }
+  else if (el.dataset.search) { state.search[el.dataset.search] = val; save(); updateLinks(); }
+  else if (el.dataset.actChange === 'prefill') { const p = findTrip(el.value); if (p) {
+      Object.assign(state.search, { from: p.origin || '', to: p.destination || '', depart: p.start || '', ret: p.end || '', adults: num(p.travelers) || 1, trip: p.id });
+      save(); render(); toast('Filled from ' + (p.name || 'trip')); } }
+});
+app.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.sim) {
+    const t = findTrip(route()[1]); if (!t) return; const s = simParams(t); s[el.dataset.sim] = num(el.value);
+    const o = document.getElementById('o-' + el.dataset.sim);
+    const f = { saved: money, monthly: money, change: v => (v > 0 ? '+' : '') + v + '%', apr: v => v + '%', spread: v => '±' + v + '%' }[el.dataset.sim];
+    if (o) o.textContent = f(s[el.dataset.sim]);
+    save(); clearTimeout(updateSim.h); updateSim.h = setTimeout(updateSim, 60);
+  } else if (el.dataset.search) { state.search[el.dataset.search] = el.value; save(); updateLinks(); }
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act, [view, id] = route(), t = view === 'trip' ? findTrip(id) : null;
+  if (act === 'new-trip') {
+    const start = addMonths(today(), 6), nt = { id: uid(), name: 'New trip', origin: '', destination: '', start: iso(start), end: iso(addDays(start, 7)), travelers: 1, status: 'Idea',
+      budget: '', saved: 0, monthly: 200, notes: '', costs: [], segments: [], itinerary: [], sim: null };
+    state.trips.push(nt); save(); location.hash = `#/trip/${nt.id}/overview`; setTimeout(() => app.querySelector('[data-fid="tf-name"]')?.select(), 30);
+  }
+  else if (act === 'del-trip' && t) { if (confirm(`Delete "${t.name}"? This can't be undone.`)) { state.trips = state.trips.filter(x => x !== t); save(); location.hash = '#/'; } }
+  else if (act === 'add-row' && t) {
+    const coll = b.dataset.coll, nid = uid();
+    const blank = { costs: { id: nid, category: 'Lodging', label: '', estimate: 0, actual: '', paid: false },
+      segments: { id: nid, mode: 'Flight', carrier: '', number: '', from: t.origin || '', to: t.destination || '', depart: (t.start || '') && t.start + 'T09:00', arrive: '', conf: '', cost: 0 },
+      itinerary: { id: nid, date: t.start || '', time: '', title: '', place: '', note: '' } }[coll];
+    t[coll].push(blank); commit();
+    app.querySelector(`[data-fid="${coll}-${nid}-${coll === 'costs' ? 'label' : coll === 'segments' ? 'carrier' : 'title'}"]`)?.focus();
+  }
+  else if (act === 'del-row' && t) { t[b.dataset.coll] = t[b.dataset.coll].filter(x => x.id !== b.dataset.id); commit(); }
+  else if (act === 'fill-days' && t) {
+    const s = parseD(t.start), en = parseD(t.end); if (!s || !en) return toast('Set leave and return dates first');
+    const have = new Set(t.itinerary.map(x => x.date)); let n = 0;
+    for (let d = s; d <= en && n < 60; d = addDays(d, 1)) { const k = iso(d); if (!have.has(k)) { t.itinerary.push({ id: uid(), date: k, time: '', title: '', place: '', note: '' }); n++; } }
+    commit(); toast(n ? `Added ${plural(n, 'day')}` : 'Every day already has a row');
+  }
+  else if (act === 'sim-reset' && t) { t.sim = null; commit(); }
+  else if (act === 'sim-apply' && t) { const s = simParams(t); t.saved = s.saved; t.monthly = s.monthly; commit(); toast('Savings figures updated'); }
+  else if (act === 'search-from-trip' && t) { Object.assign(state.search, { from: t.origin || '', to: t.destination || '', depart: t.start || '', ret: t.end || '', adults: num(t.travelers) || 1, trip: t.id }); save(); }
+  else if (act === 'log-fare') {
+    const s = state.search, tr = findTrip(s.trip);
+    if (!tr) return toast('Choose a trip to add the fare to');
+    if (!num(s.price)) return toast('Enter the price first');
+    const [carrier, ...rest] = String(s.carrier || '').trim().split(' ');
+    tr.segments.push({ id: uid(), mode: 'Flight', carrier: carrier || '', number: rest.join(' '), from: s.from, to: s.to, depart: s.depart ? s.depart + 'T09:00' : '', arrive: '', conf: '', cost: num(s.price) });
+    if (s.ret) tr.segments.push({ id: uid(), mode: 'Flight', carrier: carrier || '', number: '', from: s.to, to: s.from, depart: s.ret + 'T09:00', arrive: '', conf: '', cost: 0 });
+    s.price = ''; save(); location.hash = `#/trip/${tr.id}/transport`; toast('Fare added. Update the times when you book.');
+  }
+  else if (act === 'export') {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `trip-ledger-${iso(today())}.json`; a.click(); URL.revokeObjectURL(a.href);
+  }
+  else if (act === 'import') document.getElementById('importFile').click();
+  else if (act === 'reset-sample') { if (!state.trips.length || confirm('Replace your trips with the examples?')) { state = sample(); commit(); toast('Example trips loaded'); } }
+  else if (act === 'clear-all') { if (confirm('Delete every trip? Export a backup first if you might want them.')) { state.trips = []; commit(); } }
+});
+document.getElementById('importFile').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  try { const s = JSON.parse(await file.text()); if (!Array.isArray(s.trips)) throw 0; state = normalize(s); commit(); toast(`Imported ${plural(state.trips.length, 'trip')}`); }
+  catch (err) { toast('That file isn\'t a Trip Ledger backup'); }
+  e.target.value = '';
+});
+window.addEventListener('hashchange', render);
+render();
+</script>
+</body>
+</html>
