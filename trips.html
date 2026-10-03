@@ -137,6 +137,17 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
 .links a b{display:block;font-family:var(--display);font-size:1.1rem}
 .links a span{font-size:.85rem;color:var(--muted)}
 
+/* pay-mode switch */
+.seg{display:inline-flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:9px;background:var(--bg);margin-bottom:16px}
+.seg button{border:none;background:transparent;color:var(--muted);padding:6px 14px}
+.seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+/* AI planner */
+details.ai>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+details.ai>summary::-webkit-details-marker{display:none}
+details.ai>summary::after{content:'Show';font-weight:600;font-size:.9rem;color:var(--accent);flex:none}
+details.ai[open]>summary::after{content:'Hide'}
+details.peek summary{cursor:pointer;font-size:.85rem;color:var(--muted);margin-top:10px}
+details.peek textarea{margin-top:8px;min-height:160px;font-size:.82rem}
 .empty{padding:40px 24px;text-align:center;border:2px dashed var(--line);border-radius:14px}
 .note{font-size:.85rem;color:var(--muted);border-left:3px solid var(--sun);padding-left:10px}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none}
@@ -236,19 +247,27 @@ function sample(){
         segments: [
           { id: uid(), mode: 'Flight', carrier: 'ANA', number: 'NH 107', from: 'SFO', to: 'HND', depart: d(b,0)+'T11:00', arrive: d(b,1)+'T15:25', conf: '', cost: 1350 }
         ],
-        itinerary: [], sim: null }
+        itinerary: [], sim: null, fund: 'card',
+        card: { name: 'Travel rewards card', apr: 21.99, promo: 0, payment: 450, when: 'trip' },
+        ai: { pace: 'Balanced', interests: 'Food, temples, design, day trips', extra: '', paste: '', replace: false, open: true } }
     ]
   };
 }
 function load(){
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && Array.isArray(s.trips)) return normalize(s); } catch (e) {}
-  return sample();
+  return normalize(sample());
 }
 function normalize(s){
   s.settings = Object.assign({ currency: 'USD', pool: 500 }, s.settings || {});
   s.search = Object.assign({ from:'', to:'', depart:'', ret:'', adults:1, cabin:'economy', price:'', carrier:'', trip:'' }, s.search || {});
-  s.trips.forEach(t => { t.costs ||= []; t.segments ||= []; t.itinerary ||= []; t.id ||= uid(); });
+  s.trips.forEach(tripDefaults);
   return s;
+}
+function tripDefaults(t){
+  t.costs ||= []; t.segments ||= []; t.itinerary ||= []; t.id ||= uid(); t.fund ||= 'save';
+  t.card = Object.assign({ name: '', apr: 22, promo: 0, payment: 300, when: 'now' }, t.card || {});
+  t.ai = Object.assign({ pace: 'Balanced', interests: '', extra: '', paste: '', replace: false, open: false }, t.ai || {});
+  return t;
 }
 let state = load();
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -269,8 +288,32 @@ function calc(t){
   const pct = total > 0 ? Math.min(100, saved / total * 100) : 0;
   const shortfall = Math.max(0, remaining - monthly * monthsLeft);
   const status = total === 0 ? 'none' : remaining <= 0 ? 'funded' : months <= monthsLeft ? 'track' : 'short';
-  return { items, transport, total, saved, monthly, budget, remaining, months, monthsLeft, ready, needed, pct, shortfall, status,
+  const base = { items, transport, total, saved, monthly, budget, remaining, months, monthsLeft, ready, needed, pct, shortfall, status,
            overBudget: budget > 0 && total > budget, days: daysUntil(t.start) };
+  return t.fund === 'card' ? Object.assign(base, cardCalc(t, total, saved)) : base;
+}
+/* Card balance month by month. Promo months count from when the charge lands. */
+function cardRun(amount, card, chargeM){
+  const pay = num(card.payment), apr = num(card.apr), promo = num(card.promo);
+  const pts = []; for (let k = 0; k < chargeM; k++) pts.push({ m: k, v: 0 });
+  let bal = amount, m = chargeM, interest = 0, never = false; pts.push({ m, v: -bal });
+  for (let k = 1; bal > 0.005 && k <= 600; k++) {
+    const r = k <= promo ? 0 : apr / 1200;
+    if (pay <= 0 || (r > 0 && pay <= bal * r)) { never = true;
+      for (let j = 0; j < 24; j++) { m++; const i = bal * r; interest += i; bal = bal + i - pay; pts.push({ m, v: -bal }); } break; }
+    m++; const i = bal * r; interest += i; bal = bal + i - pay; pts.push({ m, v: -Math.max(0, bal) });
+  }
+  if (pts.length < 2) pts.push({ m: m + 1, v: 0 });
+  return { pts, paidM: never || bal > 0.005 ? Infinity : m, interest: never ? Infinity : interest, chargeM };
+}
+const annuity = (amount, apr, n) => { const r = apr / 1200; return n <= 0 ? amount : r ? amount * r / (1 - Math.pow(1 + r, -n)) : amount / n; };
+function cardCalc(t, total, saved){
+  const onCard = Math.max(0, total - saved), ml = monthsUntil(t.start);
+  const r = cardRun(onCard, t.card, t.card.when === 'trip' ? ml : 0);
+  const endM = monthsUntil(t.end || t.start);
+  return { card: true, onCard, run: r, payoffDate: isFinite(r.paidM) ? addMonths(today(), r.paidM) : null, cardInterest: r.interest,
+    afterReturn: isFinite(r.paidM) ? r.paidM - endM : Infinity, promoPay: num(t.card.promo) > 0 ? onCard / num(t.card.promo) : 0,
+    status: onCard <= 0 ? 'funded' : isFinite(r.paidM) ? 'card' : 'cardbad' };
 }
 function payoff(debt, apr, pay){
   const r = apr / 1200; if (debt <= 0) return { months: 0, interest: 0 };
@@ -279,7 +322,8 @@ function payoff(debt, apr, pay){
   return { months: m, interest: i };
 }
 function statusPill(c){
-  const map = { funded: ['ok','Fully saved'], track: ['ok','On track'], short: ['bad','Behind'], none: ['warn','Add costs'] };
+  const map = { funded: ['ok','Fully saved'], track: ['ok','On track'], short: ['bad','Behind'], none: ['warn','Add costs'],
+    card: ['warn','On a card'], cardbad: ['bad','Payment too low'] };
   const [cls, label] = map[c.status]; return `<span class="pill ${cls}">${label}</span>`;
 }
 
@@ -315,8 +359,10 @@ function ticket(t){
     </div>
     <div class="stub">
       <div><span class="countdown">${when}</span> <span class="muted small">${c.days != null && c.days >= 0 ? 'days to go' : ''}</span></div>
-      <div class="meter" aria-label="${Math.round(c.pct)}% saved"><i style="width:${c.pct}%"></i></div>
-      <div class="small">${money(c.saved)} of ${money(c.total)}</div>
+      ${c.card && c.onCard > 0 ? `<div class="small">${money(c.onCard)} on card</div>
+      <div class="small muted">${c.payoffDate ? 'Paid off ' + fmtMonth(c.payoffDate) : 'Never paid off at this rate'}</div>`
+      : `<div class="meter" aria-label="${Math.round(c.pct)}% saved"><i style="width:${c.pct}%"></i></div>
+      <div class="small">${money(c.saved)} of ${money(c.total)}</div>`}
       ${statusPill(c)}
     </div></a>`;
 }
@@ -332,7 +378,7 @@ function viewHome(){
       <div><b>${upcoming.length}</b><span>Upcoming trips</span></div>
       <div><b>${money(sum(cs, c => c.total))}</b><span>Projected cost</span></div>
       <div><b>${money(sum(cs, c => c.saved))}</b><span>Saved so far</span></div>
-      <div><b>${money(sum(cs, c => c.monthly))}</b><span>Saving each month</span></div>
+      <div><b>${money(sum(upcoming, t => t.fund === 'card' ? num(t.card.payment) : num(t.monthly)))}</b><span>Saving and card payments a month</span></div>
     </div>
     <div class="tickets">${upcoming.map(ticket).join('') || '<p class="muted">No upcoming trips.</p>'}</div>
     ${past.length ? `<h2 style="margin-top:36px">Past trips</h2><div class="tickets">${past.map(ticket).join('')}</div>` : ''}`;
@@ -355,8 +401,46 @@ function viewTrip(t, tab){
 const tf = (t, key, label, type = 'text', extra = '') =>
   `<label class="f">${label}<input type="${type}" data-tf="${key}" data-fid="tf-${key}" value="${esc(t[key])}" ${extra}></label>`;
 
+const cf = (t, key, label, type = 'text', extra = '') =>
+  `<label class="f">${label}<input type="${type}" data-card="${key}" data-fid="cf-${key}" value="${esc(t.card[key])}" ${extra}></label>`;
+function payModeSwitch(t){
+  return `<div class="seg" role="group" aria-label="How you'll pay">
+    <button data-act="fund" data-v="save" aria-pressed="${t.fund !== 'card'}">Save first</button>
+    <button data-act="fund" data-v="card" aria-pressed="${t.fund === 'card'}">Pay with a card</button></div>`;
+}
+function cardOverview(t, c){
+  const pay = num(t.card.payment), apr = num(t.card.apr), promo = num(t.card.promo);
+  let verdict;
+  if (c.total === 0) verdict = `Add costs and bookings to see how long the card balance takes to pay off.`;
+  else if (c.onCard <= 0) verdict = `<strong>Your cash covers the whole trip</strong>, so nothing needs to go on the card.`;
+  else if (!c.payoffDate) verdict = `At ${money(pay)} a month the interest is bigger than your payment, so the <strong>${money(c.onCard)}</strong> balance never clears. Pay at least <strong>${money(Math.ceil(annuity(c.onCard, apr, 24)))}</strong> a month to clear it in two years.`;
+  else verdict = `Putting <strong>${money(c.onCard)}</strong> on the card and paying ${money(pay)} a month clears it by <strong>${fmtMonth(c.payoffDate)}</strong>` +
+    (c.afterReturn > 0 ? `, ${plural(c.afterReturn, 'month')} after you get home. ` : `, before you get home. `) +
+    (c.cardInterest > 0.5 ? `Interest adds <strong>${money(c.cardInterest)}</strong>, so the trip really costs ${money(c.total + c.cardInterest)}.` : `You pay no interest.`);
+  const tips = [];
+  if (c.onCard > 0 && promo > 0 && c.cardInterest > 0.5) tips.push(`To clear it within the ${promo}-month 0% period and pay no interest, pay ${money(Math.ceil(c.promoPay))} a month.`);
+  if (c.onCard > 0 && promo === 0 && apr > 0 && c.payoffDate) tips.push(`Paying ${money(Math.ceil(annuity(c.onCard, apr, 6)))} a month would clear it in 6 months, with less interest.`);
+  tips.push(`These are estimates, not financial advice. Check your card's statement for its real APR, when any 0% rate ends, and the minimum payment.`);
+  const money_ = `<section class="panel"><h2>How you'll pay</h2>${payModeSwitch(t)}<div class="form">
+      ${tf(t,'budget','Budget','number','min="0" step="50"')}
+      ${tf(t,'saved','Cash you\'ll put down','number','min="0" step="50"')}
+      ${cf(t,'name','Card')}
+      ${cf(t,'apr','Interest rate (APR %)','number','min="0" step="0.01"')}
+      ${cf(t,'promo','0% intro months','number','min="0" max="36"')}
+      ${cf(t,'payment','Monthly payment','number','min="0" step="25"')}
+      <label class="f">Charged<select data-card="when" data-fid="cf-when"><option value="now" ${t.card.when === 'now' ? 'selected' : ''}>Now, as I book</option><option value="trip" ${t.card.when === 'trip' ? 'selected' : ''}>When I leave</option></select></label>
+    </div>
+    <div class="statline two" style="margin-top:16px">
+      <div><b>${money(c.onCard)}</b><span>On the card</span></div>
+      <div><b>${isFinite(c.cardInterest) ? money(c.cardInterest) : '—'}</b><span>Total interest</span></div>
+      <div><b>${c.onCard <= 0 ? 'Nothing owed' : c.payoffDate ? fmtMonth(c.payoffDate) : 'Never'}</b><span>Paid off by</span></div>
+      <div><b>${isFinite(c.cardInterest) ? money(c.total + c.cardInterest) : '—'}</b><span>What the trip really costs</span></div>
+    </div></section>`;
+  return { verdict, finance: tips.map(x => `<p class="note" style="margin-top:12px">${x}</p>`).join(''), money: money_, meter: false };
+}
 function tabOverview(t){
   const c = calc(t), apr = t.sim?.apr ?? 22;
+  if (t.fund === 'card') return overviewLayout(t, c, cardOverview(t, c));
   let verdict;
   if (c.total === 0) verdict = `Add costs and bookings to see how long this trip takes to fund.`;
   else if (c.remaining <= 0) verdict = `<strong>You've saved enough.</strong> ${money(c.saved - c.total)} to spare against a ${money(c.total)} trip.`;
@@ -374,20 +458,7 @@ function tabOverview(t){
       (isFinite(p.months) ? `clears it in ${plural(p.months, 'month')} and costs about ${money(p.interest)} in interest.` : `never clears it. Raise the monthly amount.`) +
       ` Change the rate on the Simulate tab.</p>`;
   }
-  const byCat = {}; t.costs.forEach(x => byCat[x.category] = (byCat[x.category] || 0) + itemValue(x));
-  const rows = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
-  if (c.transport) rows.unshift(['Flights and transport', c.transport]);
-  const max = Math.max(1, ...rows.map(r => r[1]));
-  return `<div class="stack">
-    <section class="panel">
-      <p class="verdict">${verdict}</p>
-      <div class="meter" style="margin:14px 0 8px;height:10px"><i style="width:${c.pct}%"></i></div>
-      <div class="row small muted"><span>${Math.round(c.pct)}% saved</span>${statusPill(c)}
-        ${c.overBudget ? `<span class="pill warn">${money(c.total - c.budget)} over budget</span>` : ''}</div>
-      ${finance}
-    </section>
-    <div class="cols">
-      <section class="panel"><h2>Money</h2><div class="form">
+  const moneyPanel = `<section class="panel"><h2>How you'll pay</h2>${payModeSwitch(t)}<div class="form">
         ${tf(t,'budget','Budget','number','min="0" step="50"')}
         ${tf(t,'saved','Saved so far','number','min="0" step="50"')}
         ${tf(t,'monthly','Saving per month','number','min="0" step="25"')}
@@ -397,7 +468,24 @@ function tabOverview(t){
         <div><b>${money(c.remaining)}</b><span>Still to save</span></div>
         <div><b>${isFinite(c.months) ? plural(c.months, 'month') : '—'}</b><span>To fully fund</span></div>
         <div><b>${money(Math.ceil(c.needed))}</b><span>Monthly to be ready</span></div>
-      </div></section>
+      </div></section>`;
+  return overviewLayout(t, c, { verdict, finance, money: moneyPanel, meter: true });
+}
+function overviewLayout(t, c, { verdict, finance, money: moneyPanel, meter }){
+  const byCat = {}; t.costs.forEach(x => byCat[x.category] = (byCat[x.category] || 0) + itemValue(x));
+  const rows = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+  if (c.transport) rows.unshift(['Flights and transport', c.transport]);
+  const max = Math.max(1, ...rows.map(r => r[1]));
+  return `<div class="stack">
+    <section class="panel">
+      <p class="verdict">${verdict}</p>
+      ${meter ? `<div class="meter" style="margin:14px 0 8px;height:10px"><i style="width:${c.pct}%"></i></div>` : '<div style="height:12px"></div>'}
+      <div class="row small muted">${meter ? `<span>${Math.round(c.pct)}% saved</span>` : ''}${statusPill(c)}
+        ${c.overBudget ? `<span class="pill warn">${money(c.total - c.budget)} over budget</span>` : ''}</div>
+      ${finance}
+    </section>
+    <div class="cols">
+      ${moneyPanel}
       <section class="panel"><h2>Where the money goes</h2>
         ${rows.length ? rows.map(([k, v]) => `<div class="cat"><span>${esc(k)}</span><div class="bar"><i class="${k === 'Flights and transport' ? 't' : ''}" style="width:${v / max * 100}%"></i></div><span class="num" style="text-align:right">${money(v)}</span></div>`).join('')
           : '<p class="muted">No costs yet. Add them on the Costs tab.</p>'}
@@ -496,7 +584,7 @@ function tabItinerary(t){
       <td style="min-width:150px">${cell('itinerary', it, 'place', 'text', 'placeholder="Where"')}</td>
       <td style="min-width:150px"><div class="row" style="flex-wrap:nowrap">${cell('itinerary', it, 'note', 'text', 'placeholder="Note"')}<button class="x" data-act="del-row" data-coll="itinerary" data-id="${it.id}" aria-label="Delete item">×</button></div></td></tr>`;
   });
-  return `<section class="panel">
+  return aiPanel(t) + `<section class="panel" style="margin-top:18px">
     <div class="spread" style="margin-bottom:12px"><h2 style="margin:0">Itinerary</h2>
       <div class="row"><button data-act="fill-days">Add a row for each day</button><button class="primary" data-act="add-row" data-coll="itinerary">Add activity</button></div></div>
     <div class="scroll"><table class="tbl">
@@ -505,30 +593,104 @@ function tabItinerary(t){
   </section>`;
 }
 
+function aiPanel(t){
+  const a = t.ai;
+  return `<details class="panel ai" ${a.open ? 'open' : ''}>
+    <summary><div><h2 style="margin:0">Plan with AI</h2><span class="small muted">Free. Copy your trip into Claude or ChatGPT, then paste its plan back here.</span></div></summary>
+    <div class="cols" style="margin-top:18px">
+      <div>
+        <h3>1. Ask for a plan</h3>
+        <div class="form" style="margin-top:10px">
+          <label class="f">Pace<select data-ai="pace" data-fid="ai-pace">${['Relaxed','Balanced','Packed'].map(p => `<option ${p === a.pace ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
+          <label class="f">Interests<input data-ai="interests" data-fid="ai-int" value="${esc(a.interests)}" placeholder="Food, museums, hiking"></label>
+          <label class="f wide">Anything else<textarea data-ai="extra" data-fid="ai-extra" placeholder="Mobility needs, a rest day, places you must see">${esc(a.extra)}</textarea></label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="primary" data-act="ai-copy" data-open="https://claude.ai/new">Copy and open Claude</button>
+          <button data-act="ai-copy" data-open="https://chatgpt.com/">Copy and open ChatGPT</button>
+        </div>
+        <p class="small muted" style="margin-top:8px">Your dates, bookings, budget and plans so far are included. In the chat, paste with Cmd+V (Mac) or Ctrl+V and send.</p>
+        <details class="peek"><summary>See or copy the request yourself</summary><textarea readonly data-fid="ai-req">${esc(aiPrompt(t))}</textarea></details>
+      </div>
+      <div>
+        <h3>2. Bring the plan back</h3>
+        <label class="f" style="margin-top:10px">Paste the AI's whole reply<textarea data-ai="paste" data-fid="ai-paste" style="min-height:190px" placeholder="${esc((t.start || '2027-04-04') + ' | 09:00 | Morning walk | Old town | Go early')}">${esc(a.paste)}</textarea></label>
+        <label class="row small" style="margin-top:10px;gap:8px"><input type="checkbox" data-ai="replace" data-fid="ai-replace" ${a.replace ? 'checked' : ''}> Replace what's already planned</label>
+        <div class="row" style="margin-top:12px"><button class="primary" data-act="ai-import">Add to itinerary</button></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:16px">AI suggestions can be out of date. Check opening hours, prices and booking needs before you go.</p>
+  </details>`;
+}
+function aiPrompt(t){
+  const a = t.ai, sd = parseD(t.start), ed = parseD(t.end);
+  const days = sd && ed ? Math.round((ed - sd) / 864e5) + 1 : null;
+  const byCat = k => sum(t.costs.filter(x => x.category === k), itemValue);
+  const L = ['Please help me plan a day-by-day itinerary for a trip.', ''];
+  L.push(`Trip: ${t.name || 'Untitled'}`, `Travelling from ${t.origin || '?'} to ${t.destination || '?'}`,
+    `Dates: ${t.start || '?'} to ${t.end || '?'}${days ? ` (${days} days)` : ''}`, `Travelers: ${num(t.travelers) || 1}`, `Pace: ${a.pace}`);
+  if (a.interests) L.push(`Interests: ${a.interests}`);
+  const act = byCat('Activities'), food = byCat('Food');
+  if (act || food) L.push(`Budget: about ${money(act)} for activities and ${money(food)} for food, for the whole trip`);
+  const stay = t.costs.filter(x => x.category === 'Lodging' && x.label).map(x => x.label);
+  if (stay.length) L.push(`Staying at: ${stay.join('; ')}`);
+  const segs = [...t.segments].sort((x, y) => (x.depart || '').localeCompare(y.depart || ''));
+  if (segs.length) { L.push('', 'Already booked (plan around these):');
+    segs.forEach(s => L.push(`- ${[s.mode, s.carrier, s.number].filter(Boolean).join(' ')}, ${s.from || '?'} to ${s.to || '?'}${s.depart ? ', departs ' + s.depart.replace('T', ' ') : ''}${s.arrive ? ', arrives ' + s.arrive.replace('T', ' ') : ''}`)); }
+  const planned = t.itinerary.filter(x => x.title).sort((x, y) => ((x.date || '') + (x.time || '')).localeCompare((y.date || '') + (y.time || '')));
+  if (planned.length) { L.push('', 'Already planned (keep these):');
+    planned.forEach(x => L.push(`- ${[x.date, x.time, x.title].filter(Boolean).join(' ')}${x.place ? ' at ' + x.place : ''}`)); }
+  if (t.notes) L.push('', `Notes: ${t.notes}`);
+  if (a.extra) L.push(`Also: ${a.extra}`);
+  L.push('', 'Reply with the full itinerary inside one code block, one activity per line, in exactly this format:',
+    'YYYY-MM-DD | HH:MM | Activity | Place | Short note (include a rough cost if you know it)',
+    `Only use dates from ${t.start || 'the start date'} to ${t.end || 'the end date'}. Allow time for getting between places, meals and jet lag. After the code block, add up to five short tips.`);
+  return L.join('\n');
+}
+function parseAI(text){
+  const out = [];
+  for (const raw of String(text).split(/\r?\n/)) {
+    const line = raw.replace(/^[\s>*`-]+/, '').trim();
+    const m = line.match(/^(\d{4}-\d{2}-\d{2})\s*\|\s*([0-2]?\d[:.]\d{2})?\s*\|\s*([^|]+?)\s*(?:\|\s*([^|]*?)\s*)?(?:\|\s*(.*?)\s*)?\|?$/);
+    if (m) out.push({ id: uid(), date: m[1], time: m[2] ? m[2].replace('.', ':').padStart(5, '0') : '', title: m[3], place: m[4] || '', note: m[5] || '' });
+  }
+  return out;
+}
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (_) {} ta.remove(); return ok;
+  }
+}
+
 /* ---- simulate ---- */
 function simParams(t){
-  if (!t.sim) t.sim = { saved: num(t.saved), monthly: num(t.monthly), change: 0, apr: 22, spread: 15 };
+  const card = t.fund === 'card';
+  if (!t.sim) t.sim = { saved: num(t.saved), monthly: card ? num(t.card.payment) : num(t.monthly), change: 0,
+    apr: card ? num(t.card.apr) : 22, promo: num(t.card.promo), spread: 15 };
+  t.sim.promo ??= 0;
   return t.sim;
 }
 function tabSimulate(t){
-  const s = simParams(t);
+  const s = simParams(t), card = t.fund === 'card';
   const slider = (k, label, min, max, step, f) =>
     `<label class="f">${label} <output id="o-${k}">${f(s[k])}</output><input type="range" data-sim="${k}" min="${min}" max="${max}" step="${step}" value="${s[k]}"></label>`;
   const c = calc(t), cap = Math.max(2000, Math.ceil(c.total * 1.2 / 500) * 500);
   return `<div class="stack">
     <section class="panel">
       <div class="spread" style="margin-bottom:14px"><h2 style="margin:0">What if?</h2>
-        <div class="row"><button data-act="sim-reset">Reset to trip values</button><button class="primary" data-act="sim-apply">Use these savings figures</button></div></div>
+        <div class="row"><button data-act="sim-reset">Reset to trip values</button><button class="primary" data-act="sim-apply">${card ? 'Use this card plan' : 'Use these savings figures'}</button></div></div>
       <div class="sliders">
-        ${slider('saved', 'Saved now', 0, cap, 50, money)}
-        ${slider('monthly', 'Saving per month', 0, Math.max(2000, num(t.monthly) * 3), 25, money)}
+        ${slider('saved', card ? 'Cash you put down' : 'Saved now', 0, cap, 50, money)}
+        ${slider('monthly', card ? 'Card payment per month' : 'Saving per month', 0, Math.max(2000, num(s.monthly) * 3), 25, money)}
         ${slider('change', 'Prices change by', -30, 50, 1, v => (v > 0 ? '+' : '') + v + '%')}
         ${slider('apr', 'Card interest (APR)', 0, 36, 0.5, v => v + '%')}
+        ${card ? slider('promo', '0% intro months', 0, 24, 1, v => plural(v, 'month')) : ''}
         ${slider('spread', 'Cost uncertainty', 0, 50, 1, v => '±' + v + '%')}
       </div>
     </section>
-    <section class="panel"><h2>Savings and payoff over time</h2><div id="sim-path"></div></section>
-    <section class="panel"><h2>Chance you're fully saved by departure</h2><div id="sim-mc"></div></section>
+    <section class="panel"><h2>${card ? 'Card balance over time' : 'Savings and payoff over time'}</h2><div id="sim-path"></div></section>
+    <section class="panel"><h2>${card ? 'How long it could take to pay off' : 'Chance you\'re fully saved by departure'}</h2><div id="sim-mc"></div></section>
   </div>`;
 }
 function simTotal(t, s){
@@ -566,6 +728,7 @@ function monteCarlo(t, s){
 function updateSim(){
   const [, id] = route(); const t = findTrip(id); if (!t) return;
   const s = simParams(t), total = simTotal(t, s), ml = monthsUntil(t.start);
+  if (t.fund === 'card') return updateCardSim(t, s, total, ml);
   const r = runPath(s, total, ml);
   const depart = addMonths(today(), ml);
   let story = `<p>By departure in <b>${fmtMonth(depart)}</b> you'll have <b>${money(r.atTrip)}</b> against a <b>${money(total)}</b> trip.</p>`;
@@ -586,6 +749,32 @@ function updateSim(){
       <div><b>${money(Math.max(0, mc.p90 - mc.avail))}</b><span>Buffer for the expensive case</span></div>
     </div>
     <p class="note" style="margin-top:14px">Each run varies every unpaid cost by the uncertainty you set. Booked transport and items marked paid are held fixed.</p>`;
+}
+
+function updateCardSim(t, s, total, ml){
+  const card = { payment: s.monthly, apr: s.apr, promo: s.promo }, chargeM = t.card.when === 'trip' ? ml : 0;
+  const onCard = Math.max(0, total - s.saved), r = cardRun(onCard, card, chargeM);
+  let story = `<p><b>${money(onCard)}</b> goes on the card ${t.card.when === 'trip' ? 'when you leave' : 'now'}.</p>`;
+  if (onCard <= 0) story = `<p>Your cash covers the trip, so there's nothing to pay off.</p>`;
+  else if (!isFinite(r.paidM)) story += `<p>At ${money(s.monthly)} a month the interest outpaces your payments, so the balance never clears. Raise the monthly payment.</p>`;
+  else story += `<p>Paying ${money(s.monthly)} a month clears it by <b>${fmtMonth(addMonths(today(), r.paidM))}</b>` +
+    (r.interest > 0.5 ? ` and costs <b>${money(r.interest)}</b> in interest, so the trip really costs <b>${money(total + r.interest)}</b>.</p>` : ` with no interest.</p>`);
+  document.getElementById('sim-path').innerHTML = lineChart(r.pts, ml) + `<div style="margin-top:12px">${story}</div>`;
+
+  const mc = monteCarlo(t, s), runs = mc.totals.map(v => cardRun(Math.max(0, v - s.saved), card, chargeM));
+  const paid = runs.map(x => x.paidM).sort((a, b) => a - b), ints = runs.map(x => x.interest).sort((a, b) => a - b);
+  const q = (a, p) => a[Math.min(a.length - 1, Math.floor(a.length * p))];
+  const mo = m => isFinite(m) ? fmtMonth(addMonths(today(), m)) : 'Never';
+  const iv = v => isFinite(v) ? money(v) : '—';
+  document.getElementById('sim-mc').innerHTML =
+    `<p class="verdict">In 9 out of 10 simulated trips, the card is paid off by <strong>${mo(q(paid, .9))}</strong>.</p>
+    <div class="statline" style="margin-top:14px">
+      <div><b>${mo(q(paid, .5))}</b><span>Typical payoff date</span></div>
+      <div><b>${mo(q(paid, .9))}</b><span>Late case (1 in 10)</span></div>
+      <div><b>${iv(q(ints, .5))}</b><span>Typical interest</span></div>
+      <div><b>${iv(q(ints, .9))}</b><span>High interest case</span></div>
+    </div>
+    <p class="note" style="margin-top:14px">Each run varies every unpaid cost by the uncertainty you set, then works out the card payoff. Booked transport and items marked paid are held fixed.</p>`;
 }
 
 /* ---- charts ---- */
@@ -631,7 +820,7 @@ function histogram(mc){
 
 /* ---- savings plan across all trips ---- */
 function planAll(pool){
-  const st = state.trips.filter(t => (daysUntil(t.start) ?? 1) >= 0)
+  const st = state.trips.filter(t => (daysUntil(t.start) ?? 1) >= 0 && t.fund !== 'card')
     .sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999'))
     .map(t => { const c = calc(t); return { t, c, funded: c.saved, doneM: c.saved >= c.total ? 0 : null }; });
   for (let m = 1; m <= 360 && pool > 0 && st.some(x => x.doneM == null); m++) {
@@ -644,7 +833,16 @@ function planAll(pool){
 function viewPlan(){
   const pool = num(state.settings.pool);
   const st = planAll(pool);
-  const head = `<h1>Savings plan</h1><p class="muted" style="max-width:60ch;margin-top:8px">One shared monthly amount, put toward your trips in departure order. Each trip's current savings count first; once a trip is fully covered, the money moves to the next one.</p>`;
+  const cardTrips = state.trips.filter(t => (daysUntil(t.start) ?? 1) >= 0 && t.fund === 'card');
+  const cardSection = cardTrips.length ? `<section class="panel" style="margin-top:18px"><h2>Trips on a card</h2><div class="scroll"><table class="tbl">
+      <thead><tr><th>Trip</th><th>Departs</th><th class="num">On card</th><th class="num">Monthly payment</th><th>Paid off by</th><th class="num">Interest</th></tr></thead>
+      <tbody>${cardTrips.map(t => { const c = calc(t); return `<tr><td><a href="#/trip/${t.id}">${esc(t.name || 'Untitled')}</a></td><td>${fmtDate(t.start)}</td>
+        <td class="num">${money(c.onCard)}</td><td class="num">${money(num(t.card.payment))}</td>
+        <td>${c.onCard <= 0 ? 'Nothing owed' : c.payoffDate ? fmtMonth(c.payoffDate) : '<span class="pill bad">Never at this rate</span>'}</td>
+        <td class="num">${isFinite(c.cardInterest) ? money(c.cardInterest) : '—'}</td></tr>`; }).join('')}</tbody></table></div>
+      <p class="small muted" style="margin-top:10px">Card payments add up to ${money(sum(cardTrips, t => num(t.card.payment)))} a month, on top of what you save for the trips above.</p></section>` : '';
+  const head = `<h1>Savings plan</h1><p class="muted" style="max-width:60ch;margin-top:8px">One shared monthly amount, put toward your trips in departure order. Each trip's current savings count first; once a trip is fully covered, the money moves to the next one.${cardTrips.length ? ' Trips you\'re paying for with a card are listed separately.' : ''}</p>`;
+  if (!st.length && cardTrips.length) return head + cardSection;
   if (!st.length) return head + `<div class="empty" style="margin-top:20px"><p>No upcoming trips to plan for.</p><a class="btn primary" href="#/">Go to trips</a></div>`;
   const W = 680, rowH = 46, P = { l: 150, r: 20, t: 26 };
   const horizon = Math.max(6, ...st.map(x => Math.max(x.c.monthsLeft, isFinite(x.doneM ?? Infinity) ? x.doneM : x.c.monthsLeft + 6))) + 1;
@@ -675,7 +873,7 @@ function viewPlan(){
       <tbody>${st.map(x => { const late = x.doneM == null || x.doneM > x.c.monthsLeft;
         return `<tr><td><a href="#/trip/${x.t.id}">${esc(x.t.name || 'Untitled')}</a></td><td>${fmtDate(x.t.start)}</td><td class="num">${money(x.c.total)}</td>
           <td>${x.doneM == null ? 'Not within 30 years' : x.doneM === 0 ? 'Already' : fmtMonth(addMonths(today(), x.doneM))}</td>
-          <td>${late ? `<span class="pill bad">Short at departure</span>` : `<span class="pill ok">Ready in time</span>`}</td></tr>`; }).join('')}</tbody></table></div></section>`;
+          <td>${late ? `<span class="pill bad">Short at departure</span>` : `<span class="pill ok">Ready in time</span>`}</td></tr>`; }).join('')}</tbody></table></div></section>${cardSection}`;
 }
 
 /* ---- flight search ---- */
@@ -741,6 +939,8 @@ app.addEventListener('change', e => {
   const el = e.target, [view, id] = route(), t = view === 'trip' ? findTrip(id) : null;
   const val = el.type === 'number' ? (el.value === '' ? '' : num(el.value)) : el.type === 'checkbox' ? el.checked : el.value;
   if (el.dataset.tf && t) { t[el.dataset.tf] = val; commit(); }
+  else if (el.dataset.card && t) { t.card[el.dataset.card] = val; t.sim = null; commit(); }
+  else if (el.dataset.ai && t) { t.ai[el.dataset.ai] = val; el.dataset.ai === 'paste' ? save() : commit(); }
   else if (el.dataset.coll && t) { const it = t[el.dataset.coll].find(x => x.id === el.dataset.id); if (it) { it[el.dataset.k] = val; commit(); } }
   else if (el.dataset.setting) { state.settings[el.dataset.setting] = val; commit(); }
   else if (el.dataset.search) { state.search[el.dataset.search] = val; save(); updateLinks(); }
@@ -753,17 +953,22 @@ app.addEventListener('input', e => {
   if (el.dataset.sim) {
     const t = findTrip(route()[1]); if (!t) return; const s = simParams(t); s[el.dataset.sim] = num(el.value);
     const o = document.getElementById('o-' + el.dataset.sim);
-    const f = { saved: money, monthly: money, change: v => (v > 0 ? '+' : '') + v + '%', apr: v => v + '%', spread: v => '±' + v + '%' }[el.dataset.sim];
+    const f = { saved: money, monthly: money, change: v => (v > 0 ? '+' : '') + v + '%', apr: v => v + '%', spread: v => '±' + v + '%', promo: v => plural(v, 'month') }[el.dataset.sim];
     if (o) o.textContent = f(s[el.dataset.sim]);
     save(); clearTimeout(updateSim.h); updateSim.h = setTimeout(updateSim, 60);
   } else if (el.dataset.search) { state.search[el.dataset.search] = el.value; save(); updateLinks(); }
+  else if (el.dataset.ai === 'paste') { const t = findTrip(route()[1]); if (t) { t.ai.paste = el.value; save(); } }
 });
+app.addEventListener('toggle', e => {
+  if (!e.target.matches('details.ai')) return; const t = findTrip(route()[1]); if (t) { t.ai.open = e.target.open; save(); }
+}, true);
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const act = b.dataset.act, [view, id] = route(), t = view === 'trip' ? findTrip(id) : null;
   if (act === 'new-trip') {
     const start = addMonths(today(), 6), nt = { id: uid(), name: 'New trip', origin: '', destination: '', start: iso(start), end: iso(addDays(start, 7)), travelers: 1, status: 'Idea',
       budget: '', saved: 0, monthly: 200, notes: '', costs: [], segments: [], itinerary: [], sim: null };
+    tripDefaults(nt);
     state.trips.push(nt); save(); location.hash = `#/trip/${nt.id}/overview`; setTimeout(() => app.querySelector('[data-fid="tf-name"]')?.select(), 30);
   }
   else if (act === 'del-trip' && t) { if (confirm(`Delete "${t.name}"? This can't be undone.`)) { state.trips = state.trips.filter(x => x !== t); save(); location.hash = '#/'; } }
@@ -783,7 +988,22 @@ document.addEventListener('click', e => {
     commit(); toast(n ? `Added ${plural(n, 'day')}` : 'Every day already has a row');
   }
   else if (act === 'sim-reset' && t) { t.sim = null; commit(); }
-  else if (act === 'sim-apply' && t) { const s = simParams(t); t.saved = s.saved; t.monthly = s.monthly; commit(); toast('Savings figures updated'); }
+  else if (act === 'sim-apply' && t) { const s = simParams(t); t.saved = s.saved;
+    if (t.fund === 'card') { Object.assign(t.card, { payment: s.monthly, apr: s.apr, promo: s.promo }); commit(); toast('Card plan updated'); }
+    else { t.monthly = s.monthly; commit(); toast('Savings figures updated'); } }
+  else if (act === 'fund' && t) { t.fund = b.dataset.v; t.sim = null; commit(); }
+  else if (act === 'ai-copy' && t) {
+    const p = copyText(aiPrompt(t)); if (b.dataset.open) window.open(b.dataset.open, '_blank', 'noopener');
+    p.then(ok => toast(ok ? 'Copied. Paste it into the chat and send.' : 'Copy failed. Open "See or copy the request yourself" and copy it from there.'));
+  }
+  else if (act === 'ai-import' && t) {
+    const items = parseAI(t.ai.paste);
+    if (!items.length) return toast('No itinerary lines found. Paste the reply that uses the "date | time | activity" format.');
+    if (t.ai.replace) t.itinerary = items;
+    else { const key = x => (x.date + x.time + x.title).toLowerCase(), have = new Set(t.itinerary.map(key));
+      items.forEach(x => { if (!have.has(key(x))) { t.itinerary.push(x); have.add(key(x)); } }); }
+    t.ai.paste = ''; commit(); toast(`Added ${plural(items.length, 'activity').replace('activitys', 'activities')}`);
+  }
   else if (act === 'search-from-trip' && t) { Object.assign(state.search, { from: t.origin || '', to: t.destination || '', depart: t.start || '', ret: t.end || '', adults: num(t.travelers) || 1, trip: t.id }); save(); }
   else if (act === 'log-fare') {
     const s = state.search, tr = findTrip(s.trip);
@@ -799,7 +1019,7 @@ document.addEventListener('click', e => {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `trip-ledger-${iso(today())}.json`; a.click(); URL.revokeObjectURL(a.href);
   }
   else if (act === 'import') document.getElementById('importFile').click();
-  else if (act === 'reset-sample') { if (!state.trips.length || confirm('Replace your trips with the examples?')) { state = sample(); commit(); toast('Example trips loaded'); } }
+  else if (act === 'reset-sample') { if (!state.trips.length || confirm('Replace your trips with the examples?')) { state = normalize(sample()); commit(); toast('Example trips loaded'); } }
   else if (act === 'clear-all') { if (confirm('Delete every trip? Export a backup first if you might want them.')) { state.trips = []; commit(); } }
 });
 document.getElementById('importFile').addEventListener('change', async e => {
