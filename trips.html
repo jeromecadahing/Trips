@@ -141,6 +141,24 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
 .seg{display:inline-flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:9px;background:var(--bg);margin-bottom:16px}
 .seg button{border:none;background:transparent;color:var(--muted);padding:6px 14px}
 .seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+/* itinerary list */
+.small-btn{padding:4px 10px;font-size:.85rem}
+.day{margin-top:22px}
+.dayhead{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--line);padding-bottom:6px}
+.dayhead h3{font-size:1.02rem}
+.act{display:grid;grid-template-columns:84px 1fr auto;gap:14px;align-items:start;padding:11px 0;border-bottom:1px solid var(--line)}
+.act:last-child{border-bottom:none}
+.act .time,.copt .time{font-weight:600;font-variant-numeric:tabular-nums;color:var(--accent);font-size:.92rem}
+.act .what{font-weight:600;line-height:1.35}
+.act.editing{display:block;background:var(--bg);margin:8px 0;padding:14px;border-radius:10px;border-bottom:none}
+@media (max-width:560px){.act{grid-template-columns:66px 1fr auto;gap:10px}}
+/* compare options */
+.tbl.compare th{white-space:normal;vertical-align:top;padding:10px 8px}
+.tbl.compare td{vertical-align:top;padding:10px 8px}
+.tbl.compare .dlabel{font-family:var(--display);font-weight:700;font-size:.92rem}
+.copt{padding:5px 0;font-size:.9rem;line-height:1.35}
+.copt+.copt{border-top:1px dashed var(--line)}
+.opt-name{font-family:var(--display);font-size:1.02rem;color:var(--ink)}
 /* AI planner */
 details.ai>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
 details.ai>summary::-webkit-details-marker{display:none}
@@ -266,7 +284,8 @@ function normalize(s){
 function tripDefaults(t){
   t.costs ||= []; t.segments ||= []; t.itinerary ||= []; t.id ||= uid(); t.fund ||= 'save';
   t.card = Object.assign({ name: '', apr: 22, promo: 0, payment: 300, when: 'now' }, t.card || {});
-  t.ai = Object.assign({ pace: 'Balanced', interests: '', extra: '', paste: '', replace: false, open: false }, t.ai || {});
+  t.drafts ||= [];
+  t.ai = Object.assign({ options: '2', pace: 'Balanced', interests: '', extra: '', paste: '', replace: false, open: false }, t.ai || {});
   return t;
 }
 let state = load();
@@ -568,31 +587,63 @@ function tabTransport(t){
     </section></div>`;
 }
 
+let editing = null;
+const acts = n => n === 1 ? '1 activity' : `${n} activities`;
+const fmtTime = s => { if (!s) return ''; const [h, m] = s.split(':').map(Number); if (isNaN(h)) return s;
+  return new Date(2000, 0, 1, h, m || 0).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); };
+const byTime = (a, b) => (a.time || '99').localeCompare(b.time || '99');
+function tripDays(t){
+  const set = new Set(t.itinerary.map(x => x.date || ''));
+  const sd = parseD(t.start), ed = parseD(t.end);
+  if (sd && ed && ed >= sd) for (let d = sd, n = 0; d <= ed && n < 90; d = addDays(d, 1), n++) set.add(iso(d));
+  return [...set].sort((a, b) => (a || '9999').localeCompare(b || '9999'));
+}
+function dayLabel(t, date){
+  const d = parseD(date), s = parseD(t.start); if (!d) return 'No date';
+  const n = s ? Math.round((d - s) / 864e5) + 1 : null;
+  return `${n && n > 0 ? `Day ${n}, ` : ''}${fmtDay(d)}`;
+}
+function actRow(it){
+  if (editing === it.id) return `<div class="act editing">
+    <div class="form">
+      <label class="f">Date${cell('itinerary', it, 'date', 'date')}</label>
+      <label class="f">Time${cell('itinerary', it, 'time', 'time')}</label>
+      <label class="f wide">Activity${cell('itinerary', it, 'title')}</label>
+      <label class="f">Place${cell('itinerary', it, 'place')}</label>
+      <label class="f">Note${cell('itinerary', it, 'note')}</label>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="primary" data-act="edit-done">Done</button><button class="danger" data-act="del-row" data-coll="itinerary" data-id="${it.id}">Delete</button></div></div>`;
+  return `<div class="act">
+    <span class="time">${it.time ? esc(fmtTime(it.time)) : '<span class="muted" style="font-weight:500">Any time</span>'}</span>
+    <div><div class="what">${esc(it.title) || '<span class="muted">Untitled</span>'}</div>
+      ${it.place || it.note ? `<div class="small muted">${[it.place, it.note].filter(Boolean).map(esc).join('. ')}</div>` : ''}</div>
+    <div class="row" style="gap:2px;flex-wrap:nowrap"><button class="ghost small-btn" data-act="edit-row" data-id="${it.id}">Edit</button><button class="x" data-act="del-row" data-coll="itinerary" data-id="${it.id}" aria-label="Delete ${esc(it.title)}">×</button></div></div>`;
+}
+function comparePanel(t){
+  const D = t.drafts; if (!D.length) return '';
+  const dates = [...new Set(D.flatMap(d => d.items.map(x => x.date)))].sort();
+  return `<section class="panel" id="compare" style="margin-top:18px">
+    <div class="spread" style="margin-bottom:12px"><div><h2 style="margin:0">Compare options</h2><span class="small muted">Choose the plan you like best and it becomes your itinerary.</span></div>
+      <button class="danger" data-act="clear-drafts">Delete all options</button></div>
+    <div class="scroll"><table class="tbl compare" style="min-width:${160 + D.length * 240}px">
+      <thead><tr><th style="width:150px"></th>${D.map(d => `<th><div class="opt-name">${esc(d.name)}</div><div class="small muted" style="font-weight:500">${acts(d.items.length)}</div>
+        <div class="row" style="margin-top:8px;gap:4px"><button class="primary small-btn" data-act="use-draft" data-id="${d.id}">Use this plan</button><button class="x" data-act="del-draft" data-id="${d.id}" aria-label="Delete ${esc(d.name)}">×</button></div></th>`).join('')}</tr></thead>
+      <tbody>${dates.map(date => `<tr><td class="dlabel">${dayLabel(t, date)}</td>${D.map(d => { const its = d.items.filter(x => x.date === date).sort(byTime);
+        return `<td>${its.map(x => `<div class="copt">${x.time ? `<span class="time">${esc(fmtTime(x.time))}</span> ` : ''}${esc(x.title)}${x.place ? `<div class="small muted">${esc(x.place)}</div>` : ''}</div>`).join('') || '<span class="muted small">Nothing planned</span>'}</td>`; }).join('')}</tr>`).join('')}</tbody>
+    </table></div></section>`;
+}
 function tabItinerary(t){
-  const items = [...t.itinerary].sort((a, b) => ((a.date || '') + (a.time || '')).localeCompare((b.date || '') + (b.time || '')));
-  const start = parseD(t.start); let last = null, rows = '';
-  items.forEach(it => {
-    if (it.date !== last) {
-      last = it.date; const d = parseD(it.date);
-      const n = d && start ? Math.round((d - start) / 864e5) + 1 : null;
-      rows += `<tr class="day"><td colspan="5">${n ? `Day ${n}, ` : ''}${d ? fmtDay(d) : 'No date'}</td></tr>`;
-    }
-    rows += `<tr>
-      <td style="min-width:150px">${cell('itinerary', it, 'date', 'date')}</td>
-      <td style="min-width:110px">${cell('itinerary', it, 'time', 'time')}</td>
-      <td style="min-width:200px">${cell('itinerary', it, 'title', 'text', 'placeholder="What"')}</td>
-      <td style="min-width:150px">${cell('itinerary', it, 'place', 'text', 'placeholder="Where"')}</td>
-      <td style="min-width:150px"><div class="row" style="flex-wrap:nowrap">${cell('itinerary', it, 'note', 'text', 'placeholder="Note"')}<button class="x" data-act="del-row" data-coll="itinerary" data-id="${it.id}" aria-label="Delete item">×</button></div></td></tr>`;
-  });
-  return aiPanel(t) + `<section class="panel" style="margin-top:18px">
-    <div class="spread" style="margin-bottom:12px"><h2 style="margin:0">Itinerary</h2>
-      <div class="row"><button data-act="fill-days">Add a row for each day</button><button class="primary" data-act="add-row" data-coll="itinerary">Add activity</button></div></div>
-    <div class="scroll"><table class="tbl">
-      <thead><tr><th>Date</th><th>Time</th><th>Activity</th><th>Place</th><th>Note</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="5" class="muted">Nothing planned yet. Add activities or a row for each day of the trip.</td></tr>'}</tbody></table></div>
+  const body = tripDays(t).map(date => {
+    const items = t.itinerary.filter(x => (x.date || '') === date).sort(byTime);
+    return `<div class="day"><div class="dayhead"><h3>${dayLabel(t, date)}</h3><button class="ghost small-btn" data-act="add-act" data-date="${esc(date)}">+ Add</button></div>
+      ${items.length ? items.map(actRow).join('') : '<p class="small muted" style="padding:10px 0;margin:0">Nothing planned yet.</p>'}</div>`;
+  }).join('');
+  return aiPanel(t) + comparePanel(t) + `<section class="panel" id="itinerary" style="margin-top:18px">
+    <div class="spread"><h2 style="margin:0">Itinerary</h2>
+      <div class="row">${t.itinerary.length ? `<button class="danger" data-act="clear-itin">Clear itinerary</button>` : ''}<button class="primary" data-act="add-act" data-date="${esc(t.start || '')}">Add activity</button></div></div>
+    ${body || '<p class="muted" style="margin-top:12px">Set your trip dates, or add an activity.</p>'}
   </section>`;
 }
-
 function aiPanel(t){
   const a = t.ai;
   return `<details class="panel ai" ${a.open ? 'open' : ''}>
@@ -601,6 +652,7 @@ function aiPanel(t){
       <div>
         <h3>1. Ask for a plan</h3>
         <div class="form" style="margin-top:10px">
+          <label class="f">Options to ask for<select data-ai="options" data-fid="ai-opt">${['1','2','3'].map(n => `<option value="${n}" ${String(a.options) === n ? 'selected' : ''}>${n === '1' ? 'Just one plan' : n + ' to compare'}</option>`).join('')}</select></label>
           <label class="f">Pace<select data-ai="pace" data-fid="ai-pace">${['Relaxed','Balanced','Packed'].map(p => `<option ${p === a.pace ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
           <label class="f">Interests<input data-ai="interests" data-fid="ai-int" value="${esc(a.interests)}" placeholder="Food, museums, hiking"></label>
           <label class="f wide">Anything else<textarea data-ai="extra" data-fid="ai-extra" placeholder="Mobility needs, a rest day, places you must see">${esc(a.extra)}</textarea></label>
@@ -615,8 +667,8 @@ function aiPanel(t){
       <div>
         <h3>2. Bring the plan back</h3>
         <label class="f" style="margin-top:10px">Paste the AI's whole reply<textarea data-ai="paste" data-fid="ai-paste" style="min-height:190px" placeholder="${esc((t.start || '2027-04-04') + ' | 09:00 | Morning walk | Old town | Go early')}">${esc(a.paste)}</textarea></label>
-        <label class="row small" style="margin-top:10px;gap:8px"><input type="checkbox" data-ai="replace" data-fid="ai-replace" ${a.replace ? 'checked' : ''}> Replace what's already planned</label>
-        <div class="row" style="margin-top:12px"><button class="primary" data-act="ai-import">Add to itinerary</button></div>
+        <div class="row" style="margin-top:12px"><button class="primary" data-act="ai-import" data-to="drafts">Save to compare</button><button data-act="ai-import" data-to="itin">Add straight to itinerary</button></div>
+        <p class="small muted" style="margin-top:8px">Save to compare puts each option side by side so you can choose one. You can paste several replies and compare them all.</p>
       </div>
     </div>
     <p class="note" style="margin-top:16px">AI suggestions can be out of date. Check opening hours, prices and booking needs before you go.</p>
@@ -642,19 +694,29 @@ function aiPrompt(t){
     planned.forEach(x => L.push(`- ${[x.date, x.time, x.title].filter(Boolean).join(' ')}${x.place ? ' at ' + x.place : ''}`)); }
   if (t.notes) L.push('', `Notes: ${t.notes}`);
   if (a.extra) L.push(`Also: ${a.extra}`);
-  L.push('', 'Reply with the full itinerary inside one code block, one activity per line, in exactly this format:',
-    'YYYY-MM-DD | HH:MM | Activity | Place | Short note (include a rough cost if you know it)',
+  const n = Math.max(1, num(a.options) || 1);
+  if (n > 1) L.push('', `Give me ${n} different itinerary options, each with a different feel (for example one more relaxed and one built around food and neighbourhoods).`,
+    'Start each option with its own line in this form: Option 1: short title',
+    "Under that line, put that option's full itinerary in its own code block, one activity per line, in exactly this format:");
+  else L.push('', 'Reply with the full itinerary inside one code block, one activity per line, in exactly this format:');
+  L.push('YYYY-MM-DD | HH:MM | Activity | Place | Short note (include a rough cost if you know it)',
     `Only use dates from ${t.start || 'the start date'} to ${t.end || 'the end date'}. Allow time for getting between places, meals and jet lag. After the code block, add up to five short tips.`);
   return L.join('\n');
 }
-function parseAI(text){
-  const out = [];
+function parseLine(line){
+  const m = line.match(/^(\d{4}-\d{2}-\d{2})\s*\|\s*([0-2]?\d[:.]\d{2})?\s*\|\s*([^|]+?)\s*(?:\|\s*([^|]*?)\s*)?(?:\|\s*(.*?)\s*)?\|?$/);
+  return m ? { id: uid(), date: m[1], time: m[2] ? m[2].replace('.', ':').padStart(5, '0') : '', title: m[3], place: m[4] || '', note: m[5] || '' } : null;
+}
+function parseAIGroups(text){
+  const groups = []; let cur = null;
   for (const raw of String(text).split(/\r?\n/)) {
-    const line = raw.replace(/^[\s>*`-]+/, '').trim();
-    const m = line.match(/^(\d{4}-\d{2}-\d{2})\s*\|\s*([0-2]?\d[:.]\d{2})?\s*\|\s*([^|]+?)\s*(?:\|\s*([^|]*?)\s*)?(?:\|\s*(.*?)\s*)?\|?$/);
-    if (m) out.push({ id: uid(), date: m[1], time: m[2] ? m[2].replace('.', ':').padStart(5, '0') : '', title: m[3], place: m[4] || '', note: m[5] || '' });
+    const line = raw.replace(/^[\s>*`#_-]+/, '').replace(/[*`_\s]+$/, '');
+    const h = !line.includes('|') && line.match(/^option\s*([0-9]+|[a-e])\b\s*[:.)\u2013\u2014-]*\s*(.*)$/i);
+    if (h) { cur = { title: h[2].replace(/[*_]/g, '').trim(), items: [] }; groups.push(cur); continue; }
+    const it = parseLine(line);
+    if (it) { if (!cur) { cur = { title: '', items: [] }; groups.push(cur); } cur.items.push(it); }
   }
-  return out;
+  return groups.filter(g => g.items.length);
 }
 async function copyText(text){
   try { await navigator.clipboard.writeText(text); return true; } catch (e) {
@@ -997,13 +1059,34 @@ document.addEventListener('click', e => {
     p.then(ok => toast(ok ? 'Copied. Paste it into the chat and send.' : 'Copy failed. Open "See or copy the request yourself" and copy it from there.'));
   }
   else if (act === 'ai-import' && t) {
-    const items = parseAI(t.ai.paste);
-    if (!items.length) return toast('No itinerary lines found. Paste the reply that uses the "date | time | activity" format.');
-    if (t.ai.replace) t.itinerary = items;
-    else { const key = x => (x.date + x.time + x.title).toLowerCase(), have = new Set(t.itinerary.map(key));
-      items.forEach(x => { if (!have.has(key(x))) { t.itinerary.push(x); have.add(key(x)); } }); }
-    t.ai.paste = ''; commit(); toast(`Added ${plural(items.length, 'activity').replace('activitys', 'activities')}`);
+    const groups = parseAIGroups(t.ai.paste);
+    if (!groups.length) return toast('No itinerary lines found. Paste the reply that uses the "date | time | activity" format.');
+    if (b.dataset.to === 'drafts') {
+      groups.forEach(g => t.drafts.push({ id: uid(), name: `Option ${t.drafts.length + 1}${g.title ? ': ' + g.title : ''}`, items: g.items }));
+      t.ai.paste = ''; commit(); toast(`Saved ${plural(groups.length, 'option')} to compare`);
+      document.getElementById('compare')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      if (groups.length > 1) return toast(`This reply has ${groups.length} options. Use Save to compare, then pick one.`);
+      const key = x => (x.date + x.time + x.title).toLowerCase(), have = new Set(t.itinerary.map(key)); let n = 0;
+      groups[0].items.forEach(x => { if (!have.has(key(x))) { t.itinerary.push(x); have.add(key(x)); n++; } });
+      t.ai.paste = ''; commit(); toast(`Added ${acts(n)}`);
+    }
   }
+  else if (act === 'use-draft' && t) {
+    const d = t.drafts.find(x => x.id === b.dataset.id); if (!d) return;
+    if (t.itinerary.length && !confirm(`Replace your current itinerary (${acts(t.itinerary.length)}) with "${d.name}"?`)) return;
+    t.itinerary = d.items.map(x => ({ ...x, id: uid() })); editing = null; commit(); toast(`Your itinerary is now "${d.name}"`);
+    document.getElementById('itinerary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  else if (act === 'del-draft' && t) { t.drafts = t.drafts.filter(x => x.id !== b.dataset.id); commit(); }
+  else if (act === 'clear-drafts' && t) { if (confirm(`Delete all ${plural(t.drafts.length, 'option')}?`)) { t.drafts = []; commit(); } }
+  else if (act === 'clear-itin' && t) { if (confirm(`Delete all ${acts(t.itinerary.length)} from this itinerary? This can't be undone.`)) { t.itinerary = []; editing = null; commit(); } }
+  else if (act === 'add-act' && t) {
+    const nid = uid(); t.itinerary.push({ id: nid, date: b.dataset.date || t.start || '', time: '', title: '', place: '', note: '' });
+    editing = nid; commit(); app.querySelector(`[data-fid="itinerary-${nid}-title"]`)?.focus();
+  }
+  else if (act === 'edit-row' && t) { editing = b.dataset.id; render(); app.querySelector(`[data-fid="itinerary-${editing}-title"]`)?.focus(); }
+  else if (act === 'edit-done') { editing = null; render(); }
   else if (act === 'search-from-trip' && t) { Object.assign(state.search, { from: t.origin || '', to: t.destination || '', depart: t.start || '', ret: t.end || '', adults: num(t.travelers) || 1, trip: t.id }); save(); }
   else if (act === 'log-fare') {
     const s = state.search, tr = findTrip(s.trip);
@@ -1028,7 +1111,7 @@ document.getElementById('importFile').addEventListener('change', async e => {
   catch (err) { toast('That file isn\'t a Trip Ledger backup'); }
   e.target.value = '';
 });
-window.addEventListener('hashchange', render);
+window.addEventListener('hashchange', () => { editing = null; render(); });
 render();
 </script>
 </body>
