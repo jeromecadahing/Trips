@@ -115,7 +115,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
 .x:hover{color:var(--danger)}
 
 /* bars */
-.cat{display:grid;grid-template-columns:130px 1fr 90px;gap:10px;align-items:center;font-size:.9rem;margin:6px 0}
+.cat{display:grid;grid-template-columns:minmax(120px,190px) 1fr 90px;gap:10px;align-items:center;font-size:.9rem;margin:6px 0}
 .cat .bar{height:10px;background:var(--bg);border-radius:5px;overflow:hidden}
 .cat .bar i{display:block;height:100%;background:var(--accent)}
 .cat .bar i.t{background:var(--sun)}
@@ -146,12 +146,14 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
 .day{margin-top:22px}
 .dayhead{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--line);padding-bottom:6px}
 .dayhead h3{font-size:1.02rem}
-.act{display:grid;grid-template-columns:84px 1fr auto;gap:14px;align-items:start;padding:11px 0;border-bottom:1px solid var(--line)}
+.act{display:grid;grid-template-columns:84px 1fr auto auto;gap:14px;align-items:start;padding:11px 0;border-bottom:1px solid var(--line)}
 .act:last-child{border-bottom:none}
 .act .time,.copt .time{font-weight:600;font-variant-numeric:tabular-nums;color:var(--accent);font-size:.92rem}
+.act .cost{font-variant-numeric:tabular-nums;font-weight:600;font-size:.9rem;white-space:nowrap;padding-top:2px}
+.daytotal{font-size:.85rem;color:var(--muted);font-weight:500;margin-left:8px;font-family:var(--body)}
 .act .what{font-weight:600;line-height:1.35}
 .act.editing{display:block;background:var(--bg);margin:8px 0;padding:14px;border-radius:10px;border-bottom:none}
-@media (max-width:560px){.act{grid-template-columns:66px 1fr auto;gap:10px}}
+@media (max-width:560px){.act{grid-template-columns:66px 1fr auto auto;gap:8px}}
 /* compare options */
 .tbl.compare th{white-space:normal;vertical-align:top;padding:10px 8px}
 .tbl.compare td{vertical-align:top;padding:10px 8px}
@@ -193,7 +195,11 @@ details.peek textarea{margin-top:8px;min-height:160px;font-size:.82rem}
 <script>
 /* ============ helpers ============ */
 const KEY = 'tripledger.v1';
-const CATS = ['Lodging','Food','Activities','Local transport','Insurance','Visas & fees','Shopping','Other'];
+const CATS = ['Lodging','Food','Activities','Local transport','Car rental','Fuel','Insurance','Visas & fees','Shopping','Other'];
+const ICON = { 'Lodging':'🏨', 'Food':'🍽️', 'Activities':'🎟️', 'Local transport':'🚕', 'Car rental':'🚗', 'Fuel':'⛽', 'Insurance':'🛡️',
+  'Visas & fees':'🛂', 'Shopping':'🛍️', 'Other':'📦', 'Flights and transport':'✈️',
+  'Flight':'✈️', 'Train':'🚆', 'Bus':'🚌', 'Ferry':'⛴️', 'Transfer':'🚖', 'Idea':'💡', 'Saving':'🐷', 'Booked':'✅' };
+const ic = k => ICON[k] ? ICON[k] + ' ' : '';
 const MODES = ['Flight','Train','Bus','Car rental','Ferry','Transfer','Other'];
 const STATUSES = ['Idea','Saving','Booked'];
 const CURRENCIES = ['USD','EUR','GBP','CAD','AUD','NZD','JPY','CHF','INR','MXN','BRL','ZAR','SGD','AED','SEK','NOK','DKK','PLN','KRW','CNY'];
@@ -284,8 +290,8 @@ function normalize(s){
 function tripDefaults(t){
   t.costs ||= []; t.segments ||= []; t.itinerary ||= []; t.id ||= uid(); t.fund ||= 'save';
   t.card = Object.assign({ name: '', apr: 22, promo: 0, payment: 300, when: 'now' }, t.card || {});
-  t.drafts ||= [];
-  t.ai = Object.assign({ options: '2', pace: 'Balanced', interests: '', extra: '', paste: '', replace: false, open: false }, t.ai || {});
+  t.drafts ||= []; t.linkItin ??= false;
+  t.ai = Object.assign({ linkOnUse: true, options: '2', pace: 'Balanced', interests: '', extra: '', paste: '', replace: false, open: false }, t.ai || {});
   return t;
 }
 let state = load();
@@ -294,8 +300,14 @@ const findTrip = id => state.trips.find(t => t.id === id);
 
 /* ============ calculations ============ */
 const itemValue = c => num(c.actual) > 0 ? num(c.actual) : num(c.estimate);
+const ITYPES = ['Activities','Food','Local transport','Car rental','Fuel','Shopping','Other'];
+const itinTotal = t => sum(t.itinerary, x => num(x.cost));
+function itinCostItems(t){
+  return t.linkItin ? t.itinerary.filter(x => num(x.cost) > 0).map(x => ({ category: x.category || 'Activities', label: x.title, estimate: num(x.cost), actual: '', paid: false, fromItin: true })) : [];
+}
+const allCosts = t => t.costs.concat(itinCostItems(t));
 function calc(t){
-  const items = sum(t.costs, itemValue);
+  const items = sum(allCosts(t), itemValue);
   const transport = sum(t.segments, s => num(s.cost));
   const total = items + transport;
   const saved = num(t.saved), monthly = num(t.monthly), budget = num(t.budget);
@@ -373,7 +385,7 @@ function ticket(t){
   return `<a class="ticket" href="#/trip/${t.id}">
     <div class="tmain">
       <div class="route"><span>${esc(t.origin || '???')}</span>${PLANE}<span>${esc(t.destination || '???')}</span></div>
-      <h3>${esc(t.name || 'Untitled trip')} <span class="status-tag">${esc(t.status || 'Idea')}</span></h3>
+      <h3>${esc(t.name || 'Untitled trip')} <span class="status-tag">${ic(t.status || 'Idea')}${esc(t.status || 'Idea')}</span></h3>
       <p class="muted small" style="margin-top:4px">${fmtDate(t.start)} to ${fmtDate(t.end)}, ${plural(num(t.travelers) || 1, 'traveler')}</p>
     </div>
     <div class="stub">
@@ -424,8 +436,8 @@ const cf = (t, key, label, type = 'text', extra = '') =>
   `<label class="f">${label}<input type="${type}" data-card="${key}" data-fid="cf-${key}" value="${esc(t.card[key])}" ${extra}></label>`;
 function payModeSwitch(t){
   return `<div class="seg" role="group" aria-label="How you'll pay">
-    <button data-act="fund" data-v="save" aria-pressed="${t.fund !== 'card'}">Save first</button>
-    <button data-act="fund" data-v="card" aria-pressed="${t.fund === 'card'}">Pay with a card</button></div>`;
+    <button data-act="fund" data-v="save" aria-pressed="${t.fund !== 'card'}">🐷 Save first</button>
+    <button data-act="fund" data-v="card" aria-pressed="${t.fund === 'card'}">💳 Pay with a card</button></div>`;
 }
 function cardOverview(t, c){
   const pay = num(t.card.payment), apr = num(t.card.apr), promo = num(t.card.promo);
@@ -440,7 +452,7 @@ function cardOverview(t, c){
   if (c.onCard > 0 && promo > 0 && c.cardInterest > 0.5) tips.push(`To clear it within the ${promo}-month 0% period and pay no interest, pay ${money(Math.ceil(c.promoPay))} a month.`);
   if (c.onCard > 0 && promo === 0 && apr > 0 && c.payoffDate) tips.push(`Paying ${money(Math.ceil(annuity(c.onCard, apr, 6)))} a month would clear it in 6 months, with less interest.`);
   tips.push(`These are estimates, not financial advice. Check your card's statement for its real APR, when any 0% rate ends, and the minimum payment.`);
-  const money_ = `<section class="panel"><h2>How you'll pay</h2>${payModeSwitch(t)}<div class="form">
+  const money_ = `<section class="panel"><h2>💰 How you'll pay</h2>${payModeSwitch(t)}<div class="form">
       ${tf(t,'budget','Budget','number','min="0" step="50"')}
       ${tf(t,'saved','Cash you\'ll put down','number','min="0" step="50"')}
       ${cf(t,'name','Card')}
@@ -477,7 +489,7 @@ function tabOverview(t){
       (isFinite(p.months) ? `clears it in ${plural(p.months, 'month')} and costs about ${money(p.interest)} in interest.` : `never clears it. Raise the monthly amount.`) +
       ` Change the rate on the Simulate tab.</p>`;
   }
-  const moneyPanel = `<section class="panel"><h2>How you'll pay</h2>${payModeSwitch(t)}<div class="form">
+  const moneyPanel = `<section class="panel"><h2>💰 How you'll pay</h2>${payModeSwitch(t)}<div class="form">
         ${tf(t,'budget','Budget','number','min="0" step="50"')}
         ${tf(t,'saved','Saved so far','number','min="0" step="50"')}
         ${tf(t,'monthly','Saving per month','number','min="0" step="25"')}
@@ -491,7 +503,7 @@ function tabOverview(t){
   return overviewLayout(t, c, { verdict, finance, money: moneyPanel, meter: true });
 }
 function overviewLayout(t, c, { verdict, finance, money: moneyPanel, meter }){
-  const byCat = {}; t.costs.forEach(x => byCat[x.category] = (byCat[x.category] || 0) + itemValue(x));
+  const byCat = {}; allCosts(t).forEach(x => byCat[x.category] = (byCat[x.category] || 0) + itemValue(x));
   const rows = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
   if (c.transport) rows.unshift(['Flights and transport', c.transport]);
   const max = Math.max(1, ...rows.map(r => r[1]));
@@ -505,20 +517,20 @@ function overviewLayout(t, c, { verdict, finance, money: moneyPanel, meter }){
     </section>
     <div class="cols">
       ${moneyPanel}
-      <section class="panel"><h2>Where the money goes</h2>
-        ${rows.length ? rows.map(([k, v]) => `<div class="cat"><span>${esc(k)}</span><div class="bar"><i class="${k === 'Flights and transport' ? 't' : ''}" style="width:${v / max * 100}%"></i></div><span class="num" style="text-align:right">${money(v)}</span></div>`).join('')
+      <section class="panel"><h2>📊 Where the money goes</h2>
+        ${rows.length ? rows.map(([k, v]) => `<div class="cat"><span>${ic(k)}${esc(k)}</span><div class="bar"><i class="${k === 'Flights and transport' ? 't' : ''}" style="width:${v / max * 100}%"></i></div><span class="num" style="text-align:right">${money(v)}</span></div>`).join('')
           : '<p class="muted">No costs yet. Add them on the Costs tab.</p>'}
         ${c.total && num(t.travelers) > 1 ? `<p class="small muted" style="margin-top:12px">${money(c.total / num(t.travelers))} per traveler.</p>` : ''}
       </section>
     </div>
-    <section class="panel"><h2>Trip details</h2><div class="form">
+    <section class="panel"><h2>📝 Trip details</h2><div class="form">
       ${tf(t,'name','Trip name')}
       ${tf(t,'origin','From')}
       ${tf(t,'destination','To')}
       ${tf(t,'start','Leave','date')}
       ${tf(t,'end','Return','date')}
       ${tf(t,'travelers','Travelers','number','min="1"')}
-      <label class="f">Status<select data-tf="status" data-fid="tf-status">${STATUSES.map(s => `<option ${s === t.status ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+      <label class="f">Status<select data-tf="status" data-fid="tf-status">${STATUSES.map(s => `<option value="${s}" ${s === t.status ? 'selected' : ''}>${ic(s)}${s}</option>`).join('')}</select></label>
       <label class="f wide">Notes<textarea data-tf="notes" data-fid="tf-notes">${esc(t.notes)}</textarea></label>
     </div></section>
   </div>`;
@@ -527,12 +539,12 @@ function overviewLayout(t, c, { verdict, finance, money: moneyPanel, meter }){
 const cell = (coll, it, key, type = 'text', extra = '') =>
   `<input type="${type}" data-coll="${coll}" data-id="${it.id}" data-k="${key}" data-fid="${coll}-${it.id}-${key}" value="${esc(it[key])}" ${extra} aria-label="${key}">`;
 const sel = (coll, it, key, opts) =>
-  `<select data-coll="${coll}" data-id="${it.id}" data-k="${key}" data-fid="${coll}-${it.id}-${key}" aria-label="${key}">${opts.map(o => `<option ${o === it[key] ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+  `<select data-coll="${coll}" data-id="${it.id}" data-k="${key}" data-fid="${coll}-${it.id}-${key}" aria-label="${key}">${opts.map(o => `<option value="${o}" ${o === it[key] ? 'selected' : ''}>${ic(o)}${o}</option>`).join('')}</select>`;
 
 function tabCosts(t){
   const c = calc(t);
   return `<section class="panel">
-    <div class="spread" style="margin-bottom:12px"><h2 style="margin:0">Costs</h2><button class="primary" data-act="add-row" data-coll="costs">Add cost</button></div>
+    <div class="spread" style="margin-bottom:12px"><h2 style="margin:0">🧾 Costs</h2><button class="primary" data-act="add-row" data-coll="costs">Add cost</button></div>
     <div class="scroll"><table class="tbl">
       <thead><tr><th>Category</th><th>Item</th><th class="num">Estimate</th><th class="num">Actual</th><th>Paid</th><th></th></tr></thead>
       <tbody>${t.costs.map(it => `<tr>
@@ -544,11 +556,28 @@ function tabCosts(t){
         <td><button class="x" data-act="del-row" data-coll="costs" data-id="${it.id}" aria-label="Delete cost">×</button></td></tr>`).join('')
         || '<tr><td colspan="6" class="muted">No costs yet.</td></tr>'}</tbody>
       <tfoot>
-        <tr><td colspan="2">Costs</td><td colspan="2" class="num">${money(c.items)}</td><td colspan="2"></td></tr>
+        <tr><td colspan="2">Your costs</td><td colspan="2" class="num">${money(sum(t.costs, itemValue))}</td><td colspan="2"></td></tr>
+        ${t.linkItin ? `<tr><td colspan="2" class="muted" style="font-weight:500">Activities from your itinerary</td><td colspan="2" class="num muted">${money(itinTotal(t))}</td><td colspan="2"></td></tr>` : ''}
         <tr><td colspan="2" class="muted" style="font-weight:500">Flights and transport (from that tab)</td><td colspan="2" class="num muted">${money(c.transport)}</td><td colspan="2"></td></tr>
         <tr><td colspan="2">Projected total</td><td colspan="2" class="num">${money(c.total)}</td><td colspan="2"></td></tr>
       </tfoot></table></div>
     <p class="note" style="margin-top:14px">When you enter an actual amount it replaces the estimate in every total. Items marked paid are held fixed in simulations.</p>
+  </section>${itinCostsPanel(t)}`;
+}
+function itinCostsPanel(t){
+  const items = t.itinerary.filter(x => num(x.cost) > 0 || x.category).sort((a, b) => ((a.date || '') + (a.time || '99')).localeCompare((b.date || '') + (b.time || '99')));
+  if (!items.length && !t.linkItin) return '';
+  const overlap = t.linkItin && t.costs.some(x => ['Food','Activities'].includes(x.category) && itemValue(x) > 0);
+  return `<section class="panel" style="margin-top:18px">
+    <div class="spread" style="margin-bottom:10px"><div><h2 style="margin:0">🗓️ From your itinerary</h2><span class="small muted">Costs come from the activities on the Itinerary tab. Change them here or there and both update.</span></div></div>
+    <label class="row" style="gap:8px;margin-bottom:12px"><input type="checkbox" data-act-change="link" data-fid="link-itin" ${t.linkItin ? 'checked' : ''}> <b>Count these in the trip total</b> <span class="muted small">(${money(itinTotal(t))})</span></label>
+    ${items.length ? `<div class="scroll"><table class="tbl">
+      <thead><tr><th>Day</th><th>Activity</th><th>Type</th><th class="num">Cost</th></tr></thead>
+      <tbody>${items.map(x => `<tr><td style="white-space:nowrap">${dayLabel(t, x.date)}</td><td style="min-width:180px">${esc(x.title)}</td>
+        <td style="min-width:140px">${sel('itinerary', x, 'category', ITYPES)}</td>
+        <td style="min-width:100px">${cell('itinerary', x, 'cost', 'number', 'min="0" step="5"')}</td></tr>`).join('')}</tbody></table></div>`
+      : '<p class="muted small">No activity costs yet. Plan with AI, or add a cost when you edit an activity.</p>'}
+    ${overlap ? `<p class="note" style="margin-top:12px">Your own Food and Activities estimates above are still counted too. Lower or delete them if the itinerary already covers them, so nothing is counted twice.</p>` : ''}
   </section>`;
 }
 
@@ -560,10 +589,10 @@ function tabTransport(t){
   const segs = [...t.segments].sort((a, b) => (a.depart || '').localeCompare(b.depart || ''));
   return `<div class="stack">
     <section class="panel">
-      <div class="spread" style="margin-bottom:6px"><h2 style="margin:0">Journey</h2>
+      <div class="spread" style="margin-bottom:6px"><h2 style="margin:0">🧭 Journey</h2>
         <div class="row"><a class="btn" href="#/search" data-act="search-from-trip">Search fares</a><button class="primary" data-act="add-row" data-coll="segments">Add leg</button></div></div>
       ${segs.length ? segs.map(s => `<div class="leg">
-        <span class="mode">${esc(s.mode)}<br>${esc(s.carrier)} ${esc(s.number)}</span>
+        <span class="mode">${ic(s.mode)}${esc(s.mode)}<br>${esc(s.carrier)} ${esc(s.number)}</span>
         <div><div class="pts">${esc(s.from || '?')} to ${esc(s.to || '?')}</div>
           <div class="small muted">${fmtDT(s.depart)} to ${fmtDT(s.arrive)}${duration(s.depart, s.arrive) ? ', ' + duration(s.depart, s.arrive) : ''}${s.conf ? ', ref ' + esc(s.conf) : ''}</div></div>
         <b>${num(s.cost) ? money(num(s.cost)) : ''}</b></div>`).join('') : '<p class="muted">No flights or transport yet.</p>'}
@@ -611,35 +640,41 @@ function actRow(it){
       <label class="f wide">Activity${cell('itinerary', it, 'title')}</label>
       <label class="f">Place${cell('itinerary', it, 'place')}</label>
       <label class="f">Note${cell('itinerary', it, 'note')}</label>
+      <label class="f">Cost${cell('itinerary', it, 'cost', 'number', 'min="0" step="5" placeholder="0"')}</label>
+      <label class="f">Type${sel('itinerary', it, 'category', ITYPES)}</label>
     </div>
     <div class="row" style="margin-top:12px"><button class="primary" data-act="edit-done">Done</button><button class="danger" data-act="del-row" data-coll="itinerary" data-id="${it.id}">Delete</button></div></div>`;
   return `<div class="act">
     <span class="time">${it.time ? esc(fmtTime(it.time)) : '<span class="muted" style="font-weight:500">Any time</span>'}</span>
-    <div><div class="what">${esc(it.title) || '<span class="muted">Untitled</span>'}</div>
+    <div><div class="what">${it.category ? ic(it.category) : ''}${esc(it.title) || '<span class="muted">Untitled</span>'}</div>
       ${it.place || it.note ? `<div class="small muted">${[it.place, it.note].filter(Boolean).map(esc).join('. ')}</div>` : ''}</div>
+    <span class="cost">${num(it.cost) > 0 ? money(num(it.cost)) : ''}</span>
     <div class="row" style="gap:2px;flex-wrap:nowrap"><button class="ghost small-btn" data-act="edit-row" data-id="${it.id}">Edit</button><button class="x" data-act="del-row" data-coll="itinerary" data-id="${it.id}" aria-label="Delete ${esc(it.title)}">×</button></div></div>`;
 }
 function comparePanel(t){
   const D = t.drafts; if (!D.length) return '';
   const dates = [...new Set(D.flatMap(d => d.items.map(x => x.date)))].sort();
   return `<section class="panel" id="compare" style="margin-top:18px">
-    <div class="spread" style="margin-bottom:12px"><div><h2 style="margin:0">Compare options</h2><span class="small muted">Choose the plan you like best and it becomes your itinerary.</span></div>
+    <div class="spread" style="margin-bottom:12px"><div><h2 style="margin:0">⚖️ Compare options</h2><span class="small muted">Choose the plan you like best and it becomes your itinerary.</span></div>
       <button class="danger" data-act="clear-drafts">Delete all options</button></div>
     <div class="scroll"><table class="tbl compare" style="min-width:${160 + D.length * 240}px">
-      <thead><tr><th style="width:150px"></th>${D.map(d => `<th><div class="opt-name">${esc(d.name)}</div><div class="small muted" style="font-weight:500">${acts(d.items.length)}</div>
+      <thead><tr><th style="width:150px"><label class="row small" style="gap:6px;font-weight:500;color:var(--muted)"><input type="checkbox" data-ai="linkOnUse" data-fid="ai-link" ${t.ai.linkOnUse ? 'checked' : ''}> Add costs to the Costs tab when I pick a plan</label></th>${D.map(d => `<th><div class="opt-name">${esc(d.name)}</div><div class="small muted" style="font-weight:500">${acts(d.items.length)}${sum(d.items, x => num(x.cost)) > 0 ? `, about <b style="color:var(--ink)">${money(sum(d.items, x => num(x.cost)))}</b>` : ''}</div>
         <div class="row" style="margin-top:8px;gap:4px"><button class="primary small-btn" data-act="use-draft" data-id="${d.id}">Use this plan</button><button class="x" data-act="del-draft" data-id="${d.id}" aria-label="Delete ${esc(d.name)}">×</button></div></th>`).join('')}</tr></thead>
       <tbody>${dates.map(date => `<tr><td class="dlabel">${dayLabel(t, date)}</td>${D.map(d => { const its = d.items.filter(x => x.date === date).sort(byTime);
-        return `<td>${its.map(x => `<div class="copt">${x.time ? `<span class="time">${esc(fmtTime(x.time))}</span> ` : ''}${esc(x.title)}${x.place ? `<div class="small muted">${esc(x.place)}</div>` : ''}</div>`).join('') || '<span class="muted small">Nothing planned</span>'}</td>`; }).join('')}</tr>`).join('')}</tbody>
+        return `<td>${its.map(x => `<div class="copt">${x.time ? `<span class="time">${esc(fmtTime(x.time))}</span> ` : ''}${x.category ? ic(x.category) : ''}${esc(x.title)}${x.place || num(x.cost) > 0 ? `<div class="small muted">${[x.place, num(x.cost) > 0 ? money(num(x.cost)) : ''].filter(Boolean).map(esc).join(', ')}</div>` : ''}</div>`).join('') || '<span class="muted small">Nothing planned</span>'}</td>`; }).join('')}</tr>`).join('')}</tbody>
+      <tfoot><tr><td>Estimated spend</td>${D.map(d => `<td>${money(sum(d.items, x => num(x.cost)))}</td>`).join('')}</tr></tfoot>
     </table></div></section>`;
 }
 function tabItinerary(t){
   const body = tripDays(t).map(date => {
     const items = t.itinerary.filter(x => (x.date || '') === date).sort(byTime);
-    return `<div class="day"><div class="dayhead"><h3>${dayLabel(t, date)}</h3><button class="ghost small-btn" data-act="add-act" data-date="${esc(date)}">+ Add</button></div>
+    const dt = sum(items, x => num(x.cost));
+    return `<div class="day"><div class="dayhead"><h3>${dayLabel(t, date)}${dt > 0 ? `<span class="daytotal">${money(dt)}</span>` : ''}</h3><button class="ghost small-btn" data-act="add-act" data-date="${esc(date)}">+ Add</button></div>
       ${items.length ? items.map(actRow).join('') : '<p class="small muted" style="padding:10px 0;margin:0">Nothing planned yet.</p>'}</div>`;
   }).join('');
+  const it$ = itinTotal(t);
   return aiPanel(t) + comparePanel(t) + `<section class="panel" id="itinerary" style="margin-top:18px">
-    <div class="spread"><h2 style="margin:0">Itinerary</h2>
+    <div class="spread"><div><h2 style="margin:0">🗓️ Itinerary</h2>${it$ > 0 ? `<span class="small muted">${money(it$)} in activity costs, ${t.linkItin ? 'counted in the trip total' : '<a href="#/trip/' + t.id + '/costs">not yet counted in the trip total</a>'}</span>` : ''}</div>
       <div class="row">${t.itinerary.length ? `<button class="danger" data-act="clear-itin">Clear itinerary</button>` : ''}<button class="primary" data-act="add-act" data-date="${esc(t.start || '')}">Add activity</button></div></div>
     ${body || '<p class="muted" style="margin-top:12px">Set your trip dates, or add an activity.</p>'}
   </section>`;
@@ -647,7 +682,7 @@ function tabItinerary(t){
 function aiPanel(t){
   const a = t.ai;
   return `<details class="panel ai" ${a.open ? 'open' : ''}>
-    <summary><div><h2 style="margin:0">Plan with AI</h2><span class="small muted">Free. Copy your trip into Claude or ChatGPT, then paste its plan back here.</span></div></summary>
+    <summary><div><h2 style="margin:0">✨ Plan with AI</h2><span class="small muted">Free. Copy your trip into Claude or ChatGPT, then paste its plan back here.</span></div></summary>
     <div class="cols" style="margin-top:18px">
       <div>
         <h3>1. Ask for a plan</h3>
@@ -666,7 +701,7 @@ function aiPanel(t){
       </div>
       <div>
         <h3>2. Bring the plan back</h3>
-        <label class="f" style="margin-top:10px">Paste the AI's whole reply<textarea data-ai="paste" data-fid="ai-paste" style="min-height:190px" placeholder="${esc((t.start || '2027-04-04') + ' | 09:00 | Morning walk | Old town | Go early')}">${esc(a.paste)}</textarea></label>
+        <label class="f" style="margin-top:10px">Paste the AI's whole reply<textarea data-ai="paste" data-fid="ai-paste" style="min-height:190px" placeholder="${esc((t.start || '2027-04-04') + ' | 09:00 | Morning walk | Old town | Activities | 0 | Go early')}">${esc(a.paste)}</textarea></label>
         <div class="row" style="margin-top:12px"><button class="primary" data-act="ai-import" data-to="drafts">Save to compare</button><button data-act="ai-import" data-to="itin">Add straight to itinerary</button></div>
         <p class="small muted" style="margin-top:8px">Save to compare puts each option side by side so you can choose one. You can paste several replies and compare them all.</p>
       </div>
@@ -699,18 +734,38 @@ function aiPrompt(t){
     'Start each option with its own line in this form: Option 1: short title',
     "Under that line, put that option's full itinerary in its own code block, one activity per line, in exactly this format:");
   else L.push('', 'Reply with the full itinerary inside one code block, one activity per line, in exactly this format:');
-  L.push('YYYY-MM-DD | HH:MM | Activity | Place | Short note (include a rough cost if you know it)',
+  L.push('YYYY-MM-DD | HH:MM | Activity | Place | Type | Cost | Short note',
+    `Type is one of: ${ITYPES.join(', ')}. Cost is your best estimate of the total for all ${num(t.travelers) || 1} traveler(s) in ${state.settings.currency}, as a plain number with no symbol (0 if free). Don't include the flights, trains or hotels I've already booked.`,
     `Only use dates from ${t.start || 'the start date'} to ${t.end || 'the end date'}. Allow time for getting between places, meals and jet lag. After the code block, add up to five short tips.`);
   return L.join('\n');
 }
+const TYPE_MAP = { 'car rental': 'Car rental', 'rental car': 'Car rental', car: 'Car rental', fuel: 'Fuel', petrol: 'Fuel', gas: 'Fuel', food: 'Food', meal: 'Food', meals: 'Food', drinks: 'Food', dining: 'Food', activity: 'Activities', activities: 'Activities', sightseeing: 'Activities',
+  'local transport': 'Local transport', transport: 'Local transport', transit: 'Local transport', shopping: 'Shopping', other: 'Other' };
+const asType = v => TYPE_MAP[String(v || '').trim().toLowerCase()] || null;
+function parseCost(v){
+  v = String(v || '').trim(); if (!v) return null;
+  if (/^(free|none|n\/a)$/i.test(v)) return 0;
+  if (!/^(?:[^A-Za-z\d]{0,4}|[A-Z]{3}\s*)\d/.test(v)) return null;
+  const n = (v.match(/\d[\d,]*(?:\.\d+)?/g) || []).map(x => parseFloat(x.replace(/,/g, '')));
+  if (!n.length) return null;
+  return n.length > 1 && /[-\u2013]|\bto\b/.test(v) ? Math.round((n[0] + n[1]) / 2) : n[0];
+}
 function parseLine(line){
-  const m = line.match(/^(\d{4}-\d{2}-\d{2})\s*\|\s*([0-2]?\d[:.]\d{2})?\s*\|\s*([^|]+?)\s*(?:\|\s*([^|]*?)\s*)?(?:\|\s*(.*?)\s*)?\|?$/);
-  return m ? { id: uid(), date: m[1], time: m[2] ? m[2].replace('.', ':').padStart(5, '0') : '', title: m[3], place: m[4] || '', note: m[5] || '' } : null;
+  const parts = line.split('|').map(x => x.trim()); if (parts.at(-1) === '') parts.pop();
+  if (parts.length < 3 || !/^\d{4}-\d{2}-\d{2}$/.test(parts[0]) || !parts[2]) return null;
+  const tm = parts[1].match(/^([0-2]?\d)[:.](\d{2})/);
+  const it = { id: uid(), date: parts[0], time: tm ? tm[1].padStart(2, '0') + ':' + tm[2] : '', title: parts[2], place: parts[3] || '', note: '', cost: '', category: '' };
+  const rest = parts.slice(4);
+  if (rest.length && asType(rest[0])) it.category = asType(rest.shift());
+  if (rest.length && parseCost(rest[0]) != null) it.cost = parseCost(rest.shift());
+  it.note = rest.join(' | ');
+  if (it.cost !== '' && !it.category) it.category = 'Activities';
+  return it;
 }
 function parseAIGroups(text){
   const groups = []; let cur = null;
   for (const raw of String(text).split(/\r?\n/)) {
-    const line = raw.replace(/^[\s>*`#_-]+/, '').replace(/[*`_\s]+$/, '');
+    const line = raw.replace(/^[\s>*`#_|-]+/, '').replace(/[*`_\s]+$/, '');
     const h = !line.includes('|') && line.match(/^option\s*([0-9]+|[a-e])\b\s*[:.)\u2013\u2014-]*\s*(.*)$/i);
     if (h) { cur = { title: h[2].replace(/[*_]/g, '').trim(), items: [] }; groups.push(cur); continue; }
     const it = parseLine(line);
@@ -756,8 +811,8 @@ function tabSimulate(t){
   </div>`;
 }
 function simTotal(t, s){
-  const fixed = sum(t.segments, x => num(x.cost)) + sum(t.costs.filter(x => x.paid), itemValue);
-  return fixed + sum(t.costs.filter(x => !x.paid), itemValue) * (1 + s.change / 100);
+  const all = allCosts(t), fixed = sum(t.segments, x => num(x.cost)) + sum(all.filter(x => x.paid), itemValue);
+  return fixed + sum(all.filter(x => !x.paid), itemValue) * (1 + s.change / 100);
 }
 function runPath(s, total, monthsLeft){
   const pts = []; let bal = s.saved, m = 0;
@@ -775,8 +830,8 @@ function runPath(s, total, monthsLeft){
 function gauss(){ let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
 function monteCarlo(t, s){
   const runs = 3000, spread = s.spread / 100, chg = 1 + s.change / 100;
-  const fixed = sum(t.segments, x => num(x.cost)) + sum(t.costs.filter(x => x.paid), itemValue);
-  const open = t.costs.filter(x => !x.paid).map(itemValue);
+  const all = allCosts(t), fixed = sum(t.segments, x => num(x.cost)) + sum(all.filter(x => x.paid), itemValue);
+  const open = all.filter(x => !x.paid).map(itemValue);
   const avail = s.saved + s.monthly * monthsUntil(t.start);
   const totals = []; let ok = 0;
   for (let i = 0; i < runs; i++) {
@@ -1006,6 +1061,7 @@ app.addEventListener('change', e => {
   else if (el.dataset.coll && t) { const it = t[el.dataset.coll].find(x => x.id === el.dataset.id); if (it) { it[el.dataset.k] = val; commit(); } }
   else if (el.dataset.setting) { state.settings[el.dataset.setting] = val; commit(); }
   else if (el.dataset.search) { state.search[el.dataset.search] = val; save(); updateLinks(); }
+  else if (el.dataset.actChange === 'link' && t) { t.linkItin = el.checked; commit(); toast(el.checked ? 'Itinerary costs added to the trip total' : 'Itinerary costs no longer counted'); }
   else if (el.dataset.actChange === 'prefill') { const p = findTrip(el.value); if (p) {
       Object.assign(state.search, { from: p.origin || '', to: p.destination || '', depart: p.start || '', ret: p.end || '', adults: num(p.travelers) || 1, trip: p.id });
       save(); render(); toast('Filled from ' + (p.name || 'trip')); } }
@@ -1069,13 +1125,16 @@ document.addEventListener('click', e => {
       if (groups.length > 1) return toast(`This reply has ${groups.length} options. Use Save to compare, then pick one.`);
       const key = x => (x.date + x.time + x.title).toLowerCase(), have = new Set(t.itinerary.map(key)); let n = 0;
       groups[0].items.forEach(x => { if (!have.has(key(x))) { t.itinerary.push(x); have.add(key(x)); n++; } });
+      if (t.ai.linkOnUse && sum(groups[0].items, x => num(x.cost)) > 0) t.linkItin = true;
       t.ai.paste = ''; commit(); toast(`Added ${acts(n)}`);
     }
   }
   else if (act === 'use-draft' && t) {
     const d = t.drafts.find(x => x.id === b.dataset.id); if (!d) return;
     if (t.itinerary.length && !confirm(`Replace your current itinerary (${acts(t.itinerary.length)}) with "${d.name}"?`)) return;
-    t.itinerary = d.items.map(x => ({ ...x, id: uid() })); editing = null; commit(); toast(`Your itinerary is now "${d.name}"`);
+    t.itinerary = d.items.map(x => ({ ...x, id: uid() })); editing = null;
+    const spend = sum(d.items, x => num(x.cost)); if (t.ai.linkOnUse && spend > 0) t.linkItin = true;
+    commit(); toast(t.ai.linkOnUse && spend > 0 ? `Plan chosen. ${money(spend)} added to your costs.` : `Your itinerary is now "${d.name}"`);
     document.getElementById('itinerary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   else if (act === 'del-draft' && t) { t.drafts = t.drafts.filter(x => x.id !== b.dataset.id); commit(); }
