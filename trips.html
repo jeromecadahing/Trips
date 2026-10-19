@@ -2,175 +2,218 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trip Ledger</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧳</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;450;500;550;600;650;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#E6ECEF; --paper:#FFFFFF; --ink:#16233A; --muted:#5B6B80; --line:#CBD5DD;
-  --accent:#0E6E62; --accent-soft:#D3EAE6; --on-accent:#FFFFFF;
-  --sun:#D98A16; --sun-soft:#FBEBD2; --danger:#B3402A; --danger-soft:#F6DCD5;
-  --display:'Bricolage Grotesque', 'Avenir Next', system-ui, sans-serif;
-  --body:'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bg:#F5F6F4; --paper:#FFFFFF; --ink:#1D252E; --muted:#6A737D; --line:#E3E6E8; --line-2:#D3D8DC;
+  --accent:#2C6E61; --accent-soft:#E3EFEC; --on-accent:#FFFFFF;
+  --sun:#B97A14; --sun-soft:#F8EEDC; --danger:#B0442F; --danger-soft:#F7E4DF;
+  --display:'Figtree', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --body:var(--display);
+  color-scheme:light;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark){
-  :root{
-    --bg:#0F1724; --paper:#172234; --ink:#E6ECF2; --muted:#97A6B9; --line:#2A3950;
-    --accent:#45B8A6; --accent-soft:#183B3A; --on-accent:#0F1724;
-    --sun:#F0B355; --sun-soft:#3A2F1C; --danger:#E07A63; --danger-soft:#3D2420;
+  :root:not([data-theme="light"]){
+    --bg:#13181D; --paper:#1B2228; --ink:#E4E8EB; --muted:#8E979F; --line:#283139; --line-2:#36414A;
+    --accent:#5DB3A1; --accent-soft:#1E3330; --on-accent:#0F1714;
+    --sun:#E2AC57; --sun-soft:#352B1A; --danger:#E5826C; --danger-soft:#3A2420;
+    color-scheme:dark;
   }
 }
+:root[data-theme="dark"]{
+  --bg:#13181D; --paper:#1B2228; --ink:#E4E8EB; --muted:#8E979F; --line:#283139; --line-2:#36414A;
+  --accent:#5DB3A1; --accent-soft:#1E3330; --on-accent:#0F1714;
+  --sun:#E2AC57; --sun-soft:#352B1A; --danger:#E5826C; --danger-soft:#3A2420;
+  color-scheme:dark;
+}
 *{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body);-webkit-font-smoothing:antialiased}
-a{color:var(--accent)}
-h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0;letter-spacing:-.01em}
-h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800}
-h2{font-size:1.35rem;font-weight:700;margin-bottom:12px}
-h3{font-size:1.1rem;font-weight:700}
+body{background:var(--bg);color:var(--ink);font:13.5px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-underline-offset:2px}
+h1,h2,h3{font-family:var(--display);line-height:1.25;margin:0;letter-spacing:-.005em}
+h1{font-size:1.35rem;font-weight:700}
+h2{font-size:.98rem;font-weight:650;margin-bottom:12px}
+h3{font-size:.92rem;font-weight:600}
 p{margin:0 0 .6em}
-.muted{color:var(--muted)} .small{font-size:.85rem}
-.wrap{max-width:1100px;margin:0 auto;padding:20px 20px 80px}
+.muted{color:var(--muted)} .small{font-size:.8rem}
+.wrap{max-width:920px;margin:0 auto;padding:8px 20px 72px}
 
 /* top bar */
-.top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:14px 20px;max-width:1100px;margin:0 auto}
-.brand{font-family:var(--display);font-weight:800;font-size:1.3rem;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:8px}
-.brand svg{width:26px;height:26px}
-nav.main{display:flex;gap:4px;flex-wrap:wrap}
-nav.main a{color:var(--muted);text-decoration:none;padding:7px 12px;border-radius:8px;font-weight:500}
-nav.main a[aria-current="page"]{color:var(--ink);background:var(--paper)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 20px;max-width:920px;margin:0 auto}
+.brand{font-weight:700;font-size:.95rem;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:7px}
+.brand svg{width:17px;height:17px;color:var(--accent)}
+nav.main{display:flex;gap:2px;flex-wrap:wrap}
+nav.main a{color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:6px;font-weight:500;font-size:.85rem}
+nav.main a:hover{color:var(--ink)}
+nav.main a[aria-current="page"]{color:var(--ink);background:var(--paper);box-shadow:0 0 0 1px var(--line)}
 
 /* controls */
-button,.btn{font:inherit;font-weight:600;font-size:.92rem;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+button,.btn{font:inherit;font-weight:550;font-size:.82rem;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);padding:5px 11px;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;line-height:1.4}
 button:hover,.btn:hover{border-color:var(--muted)}
 .btn.primary,button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover,button.primary:hover{filter:brightness(1.07)}
 .btn.ghost,button.ghost{background:transparent;border-color:transparent;color:var(--muted)}
-.btn.danger,button.danger{color:var(--danger)}
-:focus-visible{outline:2px solid var(--sun);outline-offset:2px}
-input,select,textarea{font:inherit;font-size:.95rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
-textarea{min-height:80px;resize:vertical}
-input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
-input[type=range]{padding:0;accent-color:var(--accent)}
-label.f{display:grid;gap:4px;font-size:.85rem;color:var(--muted);font-weight:500}
-.form{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.btn.danger,button.danger{color:var(--danger);background:transparent;border-color:transparent}
+.btn.danger:hover,button.danger:hover{background:var(--danger-soft)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{font:inherit;font-size:.85rem;color:var(--ink);background:var(--paper);border:1px solid var(--line-2);border-radius:6px;padding:5px 8px;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{min-height:64px;resize:vertical}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent)}
+input[type=range]{padding:0;border:none;accent-color:var(--accent)}
+input[type=range]:focus{box-shadow:none}
+label.f{display:grid;gap:3px;font-size:.76rem;color:var(--muted);font-weight:500}
+.form{display:grid;gap:10px 12px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 .form .wide{grid-column:1/-1}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.spread{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
-.stack>*+*{margin-top:18px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.stack>*+*{margin-top:14px}
 
-.panel{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:20px}
-.cols{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.cols{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 
-/* ticket — the signature element */
-.ticket{display:grid;grid-template-columns:1fr 200px;background:var(--paper);border-radius:14px;color:inherit;text-decoration:none;
-  -webkit-mask:radial-gradient(circle 11px at calc(100% - 200px) 0,#0000 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 11px at calc(100% - 200px) 100%,#0000 98%,#000) bottom/100% 51% no-repeat;
-  mask:radial-gradient(circle 11px at calc(100% - 200px) 0,#0000 98%,#000) top/100% 51% no-repeat,radial-gradient(circle 11px at calc(100% - 200px) 100%,#0000 98%,#000) bottom/100% 51% no-repeat}
+/* ticket: the one signature element, kept but quieter */
+.ticket{display:grid;grid-template-columns:1fr 170px;background:var(--paper);border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none;transition:border-color .15s}
+.ticket:hover{border-color:var(--line-2)}
 .ticket:hover .route{color:var(--accent)}
-.tmain{padding:22px 24px;min-width:0}
-.stub{border-left:2px dashed var(--line);padding:20px;display:flex;flex-direction:column;gap:8px;justify-content:center}
-.route{font-family:var(--display);font-weight:800;font-size:clamp(1.9rem,5vw,3rem);letter-spacing:-.02em;line-height:1;display:flex;align-items:center;gap:.35em;flex-wrap:wrap;margin-bottom:10px;transition:color .15s}
-.route svg{width:.7em;height:.7em;flex:none;color:var(--sun)}
-.countdown{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1}
-.tickets{display:grid;gap:16px}
-.status-tag{display:inline-block;font-size:.78rem;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--muted);margin-left:6px;vertical-align:middle}
-@media (max-width:640px){
-  .ticket{grid-template-columns:1fr;-webkit-mask:none;mask:none}
-  .stub{border-left:none;border-top:2px dashed var(--line)}
+.tmain{padding:14px 18px;min-width:0}
+.stub{border-left:1px dashed var(--line-2);padding:14px 16px;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.route{font-weight:700;font-size:1.05rem;letter-spacing:.04em;line-height:1;display:flex;align-items:center;gap:.4em;flex-wrap:wrap;margin-bottom:8px;color:var(--muted);transition:color .15s}
+.route svg{width:.85em;height:.85em;flex:none;color:var(--sun)}
+.countdown{font-weight:700;font-size:1.15rem;line-height:1;font-variant-numeric:tabular-nums}
+.tickets{display:grid;gap:8px}
+.status-tag{display:inline-block;font-size:.7rem;font-weight:550;padding:1px 7px;border-radius:999px;background:var(--bg);color:var(--muted);margin-left:5px;vertical-align:1px;border:1px solid var(--line)}
+@media (max-width:600px){
+  .ticket{grid-template-columns:1fr}
+  .stub{border-left:none;border-top:1px dashed var(--line-2)}
 }
 
-.meter{height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
-.meter i{display:block;height:100%;background:var(--accent);border-radius:4px}
-.pill{display:inline-block;font-size:.8rem;font-weight:600;padding:3px 10px;border-radius:999px;width:fit-content}
+.meter{height:5px;background:var(--bg);border-radius:3px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.pill{display:inline-block;font-size:.72rem;font-weight:600;padding:1px 8px;border-radius:999px;width:fit-content}
 .pill.ok{background:var(--accent-soft);color:var(--accent)}
 .pill.warn{background:var(--sun-soft);color:var(--sun)}
 .pill.bad{background:var(--danger-soft);color:var(--danger)}
 
-.statline{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.statline>div{background:var(--paper);padding:14px 16px}
-.statline b{display:block;font-family:var(--display);font-size:1.45rem;font-weight:700}
-.statline.two{grid-template-columns:1fr 1fr}
-.statline span{font-size:.85rem;color:var(--muted)}
+/* stats: plain figures, no boxes */
+.statline{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px 20px;padding:2px 0}
+.statline>div{min-width:0}
+.statline b{display:block;font-size:1.05rem;font-weight:650;font-variant-numeric:tabular-nums}
+.statline.two{grid-template-columns:1fr 1fr;padding-top:14px;border-top:1px solid var(--line)}
+.statline span{font-size:.76rem;color:var(--muted)}
+.wrap>.statline{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px 18px}
 
-.verdict{font-family:var(--display);font-size:clamp(1.2rem,2.6vw,1.6rem);font-weight:500;line-height:1.3;max-width:34em}
-.verdict strong{font-weight:800}
+.verdict{font-size:1rem;font-weight:450;line-height:1.5;max-width:40em}
+.verdict strong{font-weight:650}
 
 /* trip tabs */
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:18px 0 20px;overflow-x:auto}
-.tabs a{padding:10px 14px;color:var(--muted);text-decoration:none;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
+.tabs{display:flex;gap:18px;border-bottom:1px solid var(--line);margin:14px 0 16px;overflow-x:auto}
+.tabs a{padding:8px 0;color:var(--muted);text-decoration:none;font-weight:500;font-size:.85rem;border-bottom:2px solid transparent;white-space:nowrap;margin-bottom:-1px}
+.tabs a:hover{color:var(--ink)}
 .tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
 
 /* tables */
 .scroll{overflow-x:auto}
-table.tbl{width:100%;border-collapse:collapse;font-size:.92rem}
-.tbl th{text-align:left;font-weight:600;color:var(--muted);font-size:.8rem;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
-.tbl td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
-.tbl td input,.tbl td select{padding:5px 7px}
-.tbl tfoot td{font-weight:700;border-bottom:none}
-.tbl .num{text-align:right}
-.tbl tr.day td{background:var(--bg);font-family:var(--display);font-weight:700;padding:8px 10px}
-.x{border:none;background:none;color:var(--muted);padding:4px 8px;font-size:1.1rem}
-.x:hover{color:var(--danger)}
+table.tbl{width:100%;border-collapse:collapse;font-size:.84rem}
+.tbl th{text-align:left;font-weight:500;color:var(--muted);font-size:.74rem;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl td input,.tbl td select{padding:4px 6px;border-color:transparent;background:transparent}
+.tbl td input:hover,.tbl td select:hover{border-color:var(--line-2)}
+.tbl td input:focus,.tbl td select:focus{background:var(--paper);border-color:var(--accent)}
+.tbl tfoot td{font-weight:650;border-bottom:none}
+.tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl tr.day td{background:var(--bg);font-weight:600;padding:6px 8px}
+.x{border:none;background:none;color:var(--muted);padding:3px 6px;font-size:.95rem}
+.x:hover{color:var(--danger);background:none}
 
 /* bars */
-.cat{display:grid;grid-template-columns:minmax(120px,190px) 1fr 90px;gap:10px;align-items:center;font-size:.9rem;margin:6px 0}
-.cat .bar{height:10px;background:var(--bg);border-radius:5px;overflow:hidden}
+.cat{display:grid;grid-template-columns:minmax(110px,160px) 1fr 70px;gap:10px;align-items:center;font-size:.82rem;margin:7px 0}
+.cat>:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.cat .bar{height:5px;background:var(--bg);border-radius:3px;overflow:hidden}
 .cat .bar i{display:block;height:100%;background:var(--accent)}
 .cat .bar i.t{background:var(--sun)}
 
 /* legs */
-.leg{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px dashed var(--line)}
+.leg{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
 .leg:last-child{border-bottom:none}
-.leg .mode{font-size:.8rem;font-weight:600;color:var(--muted);width:78px}
-.leg .pts{font-family:var(--display);font-weight:700;font-size:1.15rem}
+.leg .mode{font-size:.74rem;font-weight:500;color:var(--muted);width:64px}
+.leg .pts{font-weight:650;font-size:.92rem}
 
 .chart{width:100%;height:auto;display:block}
-.chart text{font:11px var(--body);fill:var(--muted)}
-.sliders{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
-.sliders output{font-weight:700;color:var(--ink)}
+.chart text{font:10px var(--body);fill:var(--muted)}
+.sliders{display:grid;gap:12px 16px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.sliders output{font-weight:650;color:var(--ink)}
 
-.links{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
-.links a{display:block;padding:14px 16px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink);background:var(--paper)}
+.links{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.links a{display:block;padding:11px 13px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);background:var(--paper)}
 .links a:hover{border-color:var(--accent)}
-.links a b{display:block;font-family:var(--display);font-size:1.1rem}
-.links a span{font-size:.85rem;color:var(--muted)}
+.links a b{display:block;font-size:.9rem;font-weight:600}
+.links a span{font-size:.76rem;color:var(--muted)}
 
 /* pay-mode switch */
-.seg{display:inline-flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:9px;background:var(--bg);margin-bottom:16px}
-.seg button{border:none;background:transparent;color:var(--muted);padding:6px 14px}
+.seg{display:inline-flex;gap:2px;padding:2px;border:1px solid var(--line);border-radius:7px;background:var(--bg);margin-bottom:12px}
+.seg button{border:none;background:transparent;color:var(--muted);padding:4px 11px;font-weight:500}
 .seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
 /* itinerary list */
-.small-btn{padding:4px 10px;font-size:.85rem}
-.day{margin-top:22px}
-.dayhead{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--line);padding-bottom:6px}
-.dayhead h3{font-size:1.02rem}
-.act{display:grid;grid-template-columns:84px 1fr auto auto;gap:14px;align-items:start;padding:11px 0;border-bottom:1px solid var(--line)}
+.small-btn{padding:3px 8px;font-size:.76rem}
+.day{margin-top:16px}
+.dayhead{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:4px}
+.dayhead h3{font-size:.84rem}
+.dayhead button{border-color:transparent;background:transparent;color:var(--muted)}
+.dayhead button:hover{color:var(--accent)}
+.act{display:grid;grid-template-columns:70px 1fr auto auto;gap:12px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line)}
 .act:last-child{border-bottom:none}
-.act .time,.copt .time{font-weight:600;font-variant-numeric:tabular-nums;color:var(--accent);font-size:.92rem}
-.act .cost{font-variant-numeric:tabular-nums;font-weight:600;font-size:.9rem;white-space:nowrap;padding-top:2px}
-.daytotal{font-size:.85rem;color:var(--muted);font-weight:500;margin-left:8px;font-family:var(--body)}
-.act .what{font-weight:600;line-height:1.35}
-.act.editing{display:block;background:var(--bg);margin:8px 0;padding:14px;border-radius:10px;border-bottom:none}
-@media (max-width:560px){.act{grid-template-columns:66px 1fr auto auto;gap:8px}}
+.act button{border-color:transparent;background:transparent;color:var(--muted);padding:2px 6px}
+.act button:hover{color:var(--ink)}
+.act .time,.copt .time{font-weight:550;font-variant-numeric:tabular-nums;color:var(--accent);font-size:.8rem}
+.act .cost{font-variant-numeric:tabular-nums;font-weight:550;font-size:.8rem;white-space:nowrap;padding-top:1px}
+.daytotal{font-size:.76rem;color:var(--muted);font-weight:400;margin-left:6px}
+.act .what{font-weight:550;line-height:1.35}
+.act.editing{display:block;background:var(--bg);margin:6px 0;padding:12px;border-radius:8px;border-bottom:none}
+.day>p,.day .muted{font-size:.8rem}
+@media (max-width:560px){.act{grid-template-columns:56px 1fr auto auto;gap:8px}}
 /* compare options */
-.tbl.compare th{white-space:normal;vertical-align:top;padding:10px 8px}
-.tbl.compare td{vertical-align:top;padding:10px 8px}
-.tbl.compare .dlabel{font-family:var(--display);font-weight:700;font-size:.92rem}
-.copt{padding:5px 0;font-size:.9rem;line-height:1.35}
+.tbl.compare th{white-space:normal;vertical-align:top;padding:8px 6px}
+.tbl.compare td{vertical-align:top;padding:8px 6px}
+.tbl.compare .dlabel{font-weight:600;font-size:.82rem}
+.copt{padding:4px 0;font-size:.82rem;line-height:1.35}
 .copt+.copt{border-top:1px dashed var(--line)}
-.opt-name{font-family:var(--display);font-size:1.02rem;color:var(--ink)}
+.opt-name{font-size:.9rem;color:var(--ink)}
 /* AI planner */
-details.ai>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+details.ai{padding:0}
+details.ai>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:10px}
 details.ai>summary::-webkit-details-marker{display:none}
-details.ai>summary::after{content:'Show';font-weight:600;font-size:.9rem;color:var(--accent);flex:none}
-details.ai[open]>summary::after{content:'Hide'}
-details.peek summary{cursor:pointer;font-size:.85rem;color:var(--muted);margin-top:10px}
-details.peek textarea{margin-top:8px;min-height:160px;font-size:.82rem}
-.empty{padding:40px 24px;text-align:center;border:2px dashed var(--line);border-radius:14px}
-.note{font-size:.85rem;color:var(--muted);border-left:3px solid var(--sun);padding-left:10px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none}
+details.ai>summary:hover .ai-chev{border-color:var(--ink)}
+.ai-mark{flex:none;width:30px;height:30px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.ai-mark svg{width:16px;height:16px}
+.ai-title{flex:1;min-width:0}
+.ai-title h2{margin:0}
+.ai-chev{flex:none;width:8px;height:8px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s}
+details.ai[open] .ai-chev{transform:rotate(-135deg) translate(-2px,-2px)}
+details.ai[open]>summary{border-bottom:1px solid var(--line);border-radius:10px 10px 0 0}
+.steps{list-style:none;margin:0;padding:16px 18px 18px;counter-reset:step}
+.steps>li{position:relative;padding:0 0 20px 34px;counter-increment:step;max-width:560px}
+.steps>li:last-child{padding-bottom:0}
+.steps>li::before{content:counter(step);position:absolute;left:0;top:-1px;width:20px;height:20px;border-radius:50%;border:1px solid var(--line-2);background:var(--paper);color:var(--muted);font-size:.72rem;font-weight:600;display:grid;place-items:center}
+.steps>li:not(:last-child)::after{content:"";position:absolute;left:10px;top:22px;bottom:2px;border-left:1px solid var(--line)}
+.steps h3{margin:0 0 8px;font-size:.88rem}
+.steps p.small{margin:-4px 0 8px}
+.ai-opts{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;margin-bottom:10px}
+.ai-lbl{font-size:.76rem;color:var(--muted)}
+.ai-seg{margin:0;width:fit-content}
+.ai-seg button{padding:3px 10px;font-size:.78rem}
+details.peek summary{cursor:pointer;font-size:.78rem;color:var(--muted);margin-top:10px}
+details.peek textarea{margin-top:8px;min-height:140px;font-size:.78rem}
+.empty{padding:32px 20px;text-align:center;border:1px dashed var(--line-2);border-radius:10px;background:var(--paper)}
+.note{font-size:.8rem;color:var(--muted);border-left:2px solid var(--sun);padding-left:10px}
+.toast{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:7px;font-weight:550;font-size:.82rem;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -199,7 +242,7 @@ const CATS = ['Lodging','Food','Activities','Local transport','Car rental','Fuel
 const ICON = { 'Lodging':'🏨', 'Food':'🍽️', 'Activities':'🎟️', 'Local transport':'🚕', 'Car rental':'🚗', 'Fuel':'⛽', 'Insurance':'🛡️',
   'Visas & fees':'🛂', 'Shopping':'🛍️', 'Other':'📦', 'Flights and transport':'✈️',
   'Flight':'✈️', 'Train':'🚆', 'Bus':'🚌', 'Ferry':'⛴️', 'Transfer':'🚖', 'Idea':'💡', 'Saving':'🐷', 'Booked':'✅' };
-const ic = k => ICON[k] ? ICON[k] + ' ' : '';
+const ic = k => '';
 const MODES = ['Flight','Train','Bus','Car rental','Ferry','Transfer','Other'];
 const STATUSES = ['Idea','Saving','Booked'];
 const CURRENCIES = ['USD','EUR','GBP','CAD','AUD','NZD','JPY','CHF','INR','MXN','BRL','ZAR','SGD','AED','SEK','NOK','DKK','PLN','KRW','CNY'];
@@ -385,7 +428,7 @@ function ticket(t){
   return `<a class="ticket" href="#/trip/${t.id}">
     <div class="tmain">
       <div class="route"><span>${esc(t.origin || '???')}</span>${PLANE}<span>${esc(t.destination || '???')}</span></div>
-      <h3>${esc(t.name || 'Untitled trip')} <span class="status-tag">${ic(t.status || 'Idea')}${esc(t.status || 'Idea')}</span></h3>
+      <h3 style="font-size:1rem">${esc(t.name || 'Untitled trip')} <span class="status-tag">${ic(t.status || 'Idea')}${esc(t.status || 'Idea')}</span></h3>
       <p class="muted small" style="margin-top:4px">${fmtDate(t.start)} to ${fmtDate(t.end)}, ${plural(num(t.travelers) || 1, 'traveler')}</p>
     </div>
     <div class="stub">
@@ -402,28 +445,27 @@ function viewHome(){
   const upcoming = sorted.filter(t => (daysUntil(t.start) ?? 1) >= 0);
   const past = sorted.filter(t => (daysUntil(t.start) ?? 1) < 0);
   const cs = upcoming.map(calc);
-  const head = `<div class="spread" style="margin-bottom:20px"><h1>Your trips</h1><button class="primary" data-act="new-trip">New trip</button></div>`;
+  const head = `<div class="spread" style="margin:6px 0 14px"><h1>Your trips</h1><button class="primary" data-act="new-trip">New trip</button></div>`;
   if (!state.trips.length) return head + `<div class="empty"><h2>No trips yet</h2><p class="muted">Add a trip to track its costs, savings and itinerary.</p><button class="primary" data-act="new-trip">New trip</button> <button data-act="reset-sample">Load example trips</button></div>`;
   return head + `
-    <div class="statline" style="margin-bottom:22px">
+    <div class="statline" style="margin-bottom:14px">
       <div><b>${upcoming.length}</b><span>Upcoming trips</span></div>
       <div><b>${money(sum(cs, c => c.total))}</b><span>Projected cost</span></div>
       <div><b>${money(sum(cs, c => c.saved))}</b><span>Saved so far</span></div>
-      <div><b>${money(sum(upcoming, t => t.fund === 'card' ? num(t.card.payment) : num(t.monthly)))}</b><span>Saving and card payments a month</span></div>
+      <div><b>${money(sum(upcoming, t => t.fund === 'card' ? num(t.card.payment) : num(t.monthly)))}</b><span>Set aside monthly</span></div>
     </div>
     <div class="tickets">${upcoming.map(ticket).join('') || '<p class="muted">No upcoming trips.</p>'}</div>
-    ${past.length ? `<h2 style="margin-top:36px">Past trips</h2><div class="tickets">${past.map(ticket).join('')}</div>` : ''}`;
+    ${past.length ? `<h2 style="margin-top:28px">Past trips</h2><div class="tickets">${past.map(ticket).join('')}</div>` : ''}`;
 }
 
 /* ---- trip ---- */
 function viewTrip(t, tab){
-  const tabs = [['overview','Budget and payoff'],['costs','Costs'],['transport','Flights and transport'],['itinerary','Itinerary'],['simulate','Simulate']];
+  const tabs = [['overview','Budget'],['costs','Costs'],['transport','Transport'],['itinerary','Itinerary'],['simulate','What if']];
   const body = { overview: tabOverview, costs: tabCosts, transport: tabTransport, itinerary: tabItinerary, simulate: tabSimulate }[tab] || tabOverview;
   return `
     <a href="#/" class="small">All trips</a>
     <div class="spread" style="margin-top:8px">
-      <div><div class="route" style="margin-bottom:6px"><span>${esc(t.origin || '???')}</span>${PLANE}<span>${esc(t.destination || '???')}</span></div>
-      <h1 style="font-size:1.4rem;font-weight:700">${esc(t.name || 'Untitled trip')}</h1></div>
+      <div><h1>${esc(t.name || 'Untitled trip')}</h1><div class="route" style="margin:6px 0 0">${esc(t.origin || '???')}${PLANE}${esc(t.destination || '???')}<span class="small" style="letter-spacing:0;font-weight:400;margin-left:.4em">${fmtDate(t.start)} to ${fmtDate(t.end)}</span></div></div>
       <button class="danger" data-act="del-trip">Delete trip</button>
     </div>
     <nav class="tabs" aria-label="Trip sections">${tabs.map(([k, l]) => `<a href="#/trip/${t.id}/${k}" ${k === tab ? 'aria-current="page"' : ''}>${l}</a>`).join('')}</nav>
@@ -436,8 +478,8 @@ const cf = (t, key, label, type = 'text', extra = '') =>
   `<label class="f">${label}<input type="${type}" data-card="${key}" data-fid="cf-${key}" value="${esc(t.card[key])}" ${extra}></label>`;
 function payModeSwitch(t){
   return `<div class="seg" role="group" aria-label="How you'll pay">
-    <button data-act="fund" data-v="save" aria-pressed="${t.fund !== 'card'}">🐷 Save first</button>
-    <button data-act="fund" data-v="card" aria-pressed="${t.fund === 'card'}">💳 Pay with a card</button></div>`;
+    <button data-act="fund" data-v="save" aria-pressed="${t.fund !== 'card'}">Save first</button>
+    <button data-act="fund" data-v="card" aria-pressed="${t.fund === 'card'}">Pay with a card</button></div>`;
 }
 function cardOverview(t, c){
   const pay = num(t.card.payment), apr = num(t.card.apr), promo = num(t.card.promo);
@@ -452,7 +494,7 @@ function cardOverview(t, c){
   if (c.onCard > 0 && promo > 0 && c.cardInterest > 0.5) tips.push(`To clear it within the ${promo}-month 0% period and pay no interest, pay ${money(Math.ceil(c.promoPay))} a month.`);
   if (c.onCard > 0 && promo === 0 && apr > 0 && c.payoffDate) tips.push(`Paying ${money(Math.ceil(annuity(c.onCard, apr, 6)))} a month would clear it in 6 months, with less interest.`);
   tips.push(`These are estimates, not financial advice. Check your card's statement for its real APR, when any 0% rate ends, and the minimum payment.`);
-  const money_ = `<section class="panel"><h2>💰 How you'll pay</h2>${payModeSwitch(t)}<div class="form">
+  const money_ = `<section class="panel"><h2>How you'll pay</h2>${payModeSwitch(t)}<div class="form">
       ${tf(t,'budget','Budget','number','min="0" step="50"')}
       ${tf(t,'saved','Cash you\'ll put down','number','min="0" step="50"')}
       ${cf(t,'name','Card')}
@@ -487,9 +529,9 @@ function tabOverview(t){
     const p = payoff(c.shortfall, apr, c.monthly);
     finance = `<p class="note" style="margin-top:14px">If you go anyway and put the ${money(c.shortfall)} shortfall on a card at ${apr}% APR, paying ${money(c.monthly)} a month ` +
       (isFinite(p.months) ? `clears it in ${plural(p.months, 'month')} and costs about ${money(p.interest)} in interest.` : `never clears it. Raise the monthly amount.`) +
-      ` Change the rate on the Simulate tab.</p>`;
+      ` Change the rate on the What if tab.</p>`;
   }
-  const moneyPanel = `<section class="panel"><h2>💰 How you'll pay</h2>${payModeSwitch(t)}<div class="form">
+  const moneyPanel = `<section class="panel"><h2>How you'll pay</h2>${payModeSwitch(t)}<div class="form">
         ${tf(t,'budget','Budget','number','min="0" step="50"')}
         ${tf(t,'saved','Saved so far','number','min="0" step="50"')}
         ${tf(t,'monthly','Saving per month','number','min="0" step="25"')}
@@ -510,20 +552,20 @@ function overviewLayout(t, c, { verdict, finance, money: moneyPanel, meter }){
   return `<div class="stack">
     <section class="panel">
       <p class="verdict">${verdict}</p>
-      ${meter ? `<div class="meter" style="margin:14px 0 8px;height:10px"><i style="width:${c.pct}%"></i></div>` : '<div style="height:12px"></div>'}
+      ${meter ? `<div class="meter" style="margin:12px 0 8px;height:6px"><i style="width:${c.pct}%"></i></div>` : '<div style="height:12px"></div>'}
       <div class="row small muted">${meter ? `<span>${Math.round(c.pct)}% saved</span>` : ''}${statusPill(c)}
         ${c.overBudget ? `<span class="pill warn">${money(c.total - c.budget)} over budget</span>` : ''}</div>
       ${finance}
     </section>
     <div class="cols">
       ${moneyPanel}
-      <section class="panel"><h2>📊 Where the money goes</h2>
+      <section class="panel"><h2>Where the money goes</h2>
         ${rows.length ? rows.map(([k, v]) => `<div class="cat"><span>${ic(k)}${esc(k)}</span><div class="bar"><i class="${k === 'Flights and transport' ? 't' : ''}" style="width:${v / max * 100}%"></i></div><span class="num" style="text-align:right">${money(v)}</span></div>`).join('')
           : '<p class="muted">No costs yet. Add them on the Costs tab.</p>'}
         ${c.total && num(t.travelers) > 1 ? `<p class="small muted" style="margin-top:12px">${money(c.total / num(t.travelers))} per traveler.</p>` : ''}
       </section>
     </div>
-    <section class="panel"><h2>📝 Trip details</h2><div class="form">
+    <section class="panel"><h2>Trip details</h2><div class="form">
       ${tf(t,'name','Trip name')}
       ${tf(t,'origin','From')}
       ${tf(t,'destination','To')}
@@ -544,7 +586,7 @@ const sel = (coll, it, key, opts) =>
 function tabCosts(t){
   const c = calc(t);
   return `<section class="panel">
-    <div class="spread" style="margin-bottom:12px"><h2 style="margin:0">🧾 Costs</h2><button class="primary" data-act="add-row" data-coll="costs">Add cost</button></div>
+    <div class="spread" style="margin-bottom:12px"><h2 style="margin:0">Costs</h2><button class="primary" data-act="add-row" data-coll="costs">Add cost</button></div>
     <div class="scroll"><table class="tbl">
       <thead><tr><th>Category</th><th>Item</th><th class="num">Estimate</th><th class="num">Actual</th><th>Paid</th><th></th></tr></thead>
       <tbody>${t.costs.map(it => `<tr>
@@ -569,7 +611,7 @@ function itinCostsPanel(t){
   if (!items.length && !t.linkItin) return '';
   const overlap = t.linkItin && t.costs.some(x => ['Food','Activities'].includes(x.category) && itemValue(x) > 0);
   return `<section class="panel" style="margin-top:18px">
-    <div class="spread" style="margin-bottom:10px"><div><h2 style="margin:0">🗓️ From your itinerary</h2><span class="small muted">Costs come from the activities on the Itinerary tab. Change them here or there and both update.</span></div></div>
+    <div class="spread" style="margin-bottom:10px"><div><h2 style="margin:0">From your itinerary</h2><span class="small muted">Costs come from the activities on the Itinerary tab. Change them here or there and both update.</span></div></div>
     <label class="row" style="gap:8px;margin-bottom:12px"><input type="checkbox" data-act-change="link" data-fid="link-itin" ${t.linkItin ? 'checked' : ''}> <b>Count these in the trip total</b> <span class="muted small">(${money(itinTotal(t))})</span></label>
     ${items.length ? `<div class="scroll"><table class="tbl">
       <thead><tr><th>Day</th><th>Activity</th><th>Type</th><th class="num">Cost</th></tr></thead>
@@ -589,7 +631,7 @@ function tabTransport(t){
   const segs = [...t.segments].sort((a, b) => (a.depart || '').localeCompare(b.depart || ''));
   return `<div class="stack">
     <section class="panel">
-      <div class="spread" style="margin-bottom:6px"><h2 style="margin:0">🧭 Journey</h2>
+      <div class="spread" style="margin-bottom:6px"><h2 style="margin:0">Journey</h2>
         <div class="row"><a class="btn" href="#/search" data-act="search-from-trip">Search fares</a><button class="primary" data-act="add-row" data-coll="segments">Add leg</button></div></div>
       ${segs.length ? segs.map(s => `<div class="leg">
         <span class="mode">${ic(s.mode)}${esc(s.mode)}<br>${esc(s.carrier)} ${esc(s.number)}</span>
@@ -655,7 +697,7 @@ function comparePanel(t){
   const D = t.drafts; if (!D.length) return '';
   const dates = [...new Set(D.flatMap(d => d.items.map(x => x.date)))].sort();
   return `<section class="panel" id="compare" style="margin-top:18px">
-    <div class="spread" style="margin-bottom:12px"><div><h2 style="margin:0">⚖️ Compare options</h2><span class="small muted">Choose the plan you like best and it becomes your itinerary.</span></div>
+    <div class="spread" style="margin-bottom:12px"><div><h2 style="margin:0">Compare options</h2><span class="small muted">Choose the plan you like best and it becomes your itinerary.</span></div>
       <button class="danger" data-act="clear-drafts">Delete all options</button></div>
     <div class="scroll"><table class="tbl compare" style="min-width:${160 + D.length * 240}px">
       <thead><tr><th style="width:150px"><label class="row small" style="gap:6px;font-weight:500;color:var(--muted)"><input type="checkbox" data-ai="linkOnUse" data-fid="ai-link" ${t.ai.linkOnUse ? 'checked' : ''}> Add costs to the Costs tab when I pick a plan</label></th>${D.map(d => `<th><div class="opt-name">${esc(d.name)}</div><div class="small muted" style="font-weight:500">${acts(d.items.length)}${sum(d.items, x => num(x.cost)) > 0 ? `, about <b style="color:var(--ink)">${money(sum(d.items, x => num(x.cost)))}</b>` : ''}</div>
@@ -674,39 +716,48 @@ function tabItinerary(t){
   }).join('');
   const it$ = itinTotal(t);
   return aiPanel(t) + comparePanel(t) + `<section class="panel" id="itinerary" style="margin-top:18px">
-    <div class="spread"><div><h2 style="margin:0">🗓️ Itinerary</h2>${it$ > 0 ? `<span class="small muted">${money(it$)} in activity costs, ${t.linkItin ? 'counted in the trip total' : '<a href="#/trip/' + t.id + '/costs">not yet counted in the trip total</a>'}</span>` : ''}</div>
+    <div class="spread"><div><h2 style="margin:0">Itinerary</h2>${it$ > 0 ? `<span class="small muted">${money(it$)} in activity costs, ${t.linkItin ? 'counted in the trip total' : '<a href="#/trip/' + t.id + '/costs">not yet counted in the trip total</a>'}</span>` : ''}</div>
       <div class="row">${t.itinerary.length ? `<button class="danger" data-act="clear-itin">Clear itinerary</button>` : ''}<button class="primary" data-act="add-act" data-date="${esc(t.start || '')}">Add activity</button></div></div>
     ${body || '<p class="muted" style="margin-top:12px">Set your trip dates, or add an activity.</p>'}
   </section>`;
 }
 function aiPanel(t){
-  const a = t.ai;
+  const a = t.ai, many = num(a.options) > 1;
+  const seg = (k, opts) => `<div class="seg ai-seg" role="group">${opts.map(([v, l]) => `<button type="button" data-act="ai-set" data-k="${k}" data-v="${v}" aria-pressed="${String(a[k]) === v}">${l}</button>`).join('')}</div>`;
+  const compareBtn = `<button class="${many ? 'primary' : ''}" data-act="ai-import" data-to="drafts">Save to compare</button>`;
+  const addBtn = `<button class="${many ? '' : 'primary'}" data-act="ai-import" data-to="itin">Add to itinerary</button>`;
   return `<details class="panel ai" ${a.open ? 'open' : ''}>
-    <summary><div><h2 style="margin:0">✨ Plan with AI</h2><span class="small muted">Free. Copy your trip into Claude or ChatGPT, then paste its plan back here.</span></div></summary>
-    <div class="cols" style="margin-top:18px">
-      <div>
-        <h3>1. Ask for a plan</h3>
-        <div class="form" style="margin-top:10px">
-          <label class="f">Options to ask for<select data-ai="options" data-fid="ai-opt">${['1','2','3'].map(n => `<option value="${n}" ${String(a.options) === n ? 'selected' : ''}>${n === '1' ? 'Just one plan' : n + ' to compare'}</option>`).join('')}</select></label>
-          <label class="f">Pace<select data-ai="pace" data-fid="ai-pace">${['Relaxed','Balanced','Packed'].map(p => `<option ${p === a.pace ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
-          <label class="f">Interests<input data-ai="interests" data-fid="ai-int" value="${esc(a.interests)}" placeholder="Food, museums, hiking"></label>
-          <label class="f wide">Anything else<textarea data-ai="extra" data-fid="ai-extra" placeholder="Mobility needs, a rest day, places you must see">${esc(a.extra)}</textarea></label>
+    <summary>
+      <span class="ai-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" opacity=".6"/></svg></span>
+      <div class="ai-title"><h2>Get itinerary ideas from AI</h2><span class="small muted">Free with Claude or ChatGPT. Takes about a minute.</span></div>
+      <span class="ai-chev" aria-hidden="true"></span>
+    </summary>
+    <ol class="steps">
+      <li>
+        <h3>Tell it what you like</h3>
+        <div class="ai-opts">
+          <span class="ai-lbl">Pace</span>${seg('pace', [['Relaxed','Relaxed'],['Balanced','Balanced'],['Packed','Packed']])}
+          <span class="ai-lbl">Plans</span>${seg('options', [['1','1 plan'],['2','2 to compare'],['3','3 to compare']])}
         </div>
-        <div class="row" style="margin-top:12px">
+        <input data-ai="interests" data-fid="ai-int" value="${esc(a.interests)}" placeholder="Interests, such as food, museums, hiking" aria-label="Interests">
+        <textarea data-ai="extra" data-fid="ai-extra" rows="2" style="min-height:0;margin-top:8px" placeholder="Anything else (optional): a rest day, mobility needs, must-sees" aria-label="Anything else">${esc(a.extra)}</textarea>
+      </li>
+      <li>
+        <h3>Copy your request into a chat</h3>
+        <p class="small muted">Your dates, bookings, budget and existing plans go with it. Paste it into the chat and send.</p>
+        <div class="row">
           <button class="primary" data-act="ai-copy" data-open="https://claude.ai/new">Copy and open Claude</button>
           <button data-act="ai-copy" data-open="https://chatgpt.com/">Copy and open ChatGPT</button>
         </div>
-        <p class="small muted" style="margin-top:8px">Your dates, bookings, budget and plans so far are included. In the chat, paste with Cmd+V (Mac) or Ctrl+V and send.</p>
-        <details class="peek"><summary>See or copy the request yourself</summary><textarea readonly data-fid="ai-req">${esc(aiPrompt(t))}</textarea></details>
-      </div>
-      <div>
-        <h3>2. Bring the plan back</h3>
-        <label class="f" style="margin-top:10px">Paste the AI's whole reply<textarea data-ai="paste" data-fid="ai-paste" style="min-height:190px" placeholder="${esc((t.start || '2027-04-04') + ' | 09:00 | Morning walk | Old town | Activities | 0 | Go early')}">${esc(a.paste)}</textarea></label>
-        <div class="row" style="margin-top:12px"><button class="primary" data-act="ai-import" data-to="drafts">Save to compare</button><button data-act="ai-import" data-to="itin">Add straight to itinerary</button></div>
-        <p class="small muted" style="margin-top:8px">Save to compare puts each option side by side so you can choose one. You can paste several replies and compare them all.</p>
-      </div>
-    </div>
-    <p class="note" style="margin-top:16px">AI suggestions can be out of date. Check opening hours, prices and booking needs before you go.</p>
+        <details class="peek"><summary>Show the request</summary><textarea readonly data-fid="ai-req">${esc(aiPrompt(t))}</textarea></details>
+      </li>
+      <li>
+        <h3>Paste the reply here</h3>
+        <textarea data-ai="paste" data-fid="ai-paste" style="min-height:110px" aria-label="AI reply" placeholder="Paste the whole reply. Lines look like: ${esc((t.start || '2027-04-04') + ' | 09:00 | Morning walk | Old town')}">${esc(a.paste)}</textarea>
+        <div class="row" style="margin-top:8px">${many ? compareBtn + addBtn : addBtn + compareBtn}</div>
+        <p class="small muted" style="margin:10px 0 0">AI can be out of date. Check opening hours, prices and booking needs before you go.</p>
+      </li>
+    </ol>
   </details>`;
 }
 function aiPrompt(t){
@@ -1110,6 +1161,7 @@ document.addEventListener('click', e => {
     if (t.fund === 'card') { Object.assign(t.card, { payment: s.monthly, apr: s.apr, promo: s.promo }); commit(); toast('Card plan updated'); }
     else { t.monthly = s.monthly; commit(); toast('Savings figures updated'); } }
   else if (act === 'fund' && t) { t.fund = b.dataset.v; t.sim = null; commit(); }
+  else if (act === 'ai-set' && t) { t.ai[b.dataset.k] = b.dataset.v; commit(); }
   else if (act === 'ai-copy' && t) {
     const p = copyText(aiPrompt(t)); if (b.dataset.open) window.open(b.dataset.open, '_blank', 'noopener');
     p.then(ok => toast(ok ? 'Copied. Paste it into the chat and send.' : 'Copy failed. Open "See or copy the request yourself" and copy it from there.'));
