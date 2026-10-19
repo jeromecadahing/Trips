@@ -424,7 +424,7 @@ function tripDefaults(t){
   t.costs ||= []; t.segments ||= []; t.itinerary ||= []; t.id ||= uid(); t.fund ||= 'save';
   t.card = Object.assign({ name: '', apr: 22, promo: 0, payment: 300, when: 'now' }, t.card || {});
   t.drafts ||= []; t.linkItin ??= false;
-  t.ai = Object.assign({ style: 'Mid-range', budget: '', hotels: true, askFirst: true, linkOnUse: true, options: '2', pace: 'Balanced', interests: '', extra: '', paste: '', replace: false, open: false }, t.ai || {});
+  t.ai = Object.assign({ current: 'draft', style: 'Mid-range', budget: '', hotels: true, askFirst: true, linkOnUse: true, options: '2', pace: 'Balanced', interests: '', extra: '', paste: '', replace: false, open: false }, t.ai || {});
   return t;
 }
 let state = load();
@@ -987,6 +987,9 @@ function aiPanel(t){
         <div class="chip-h" style="margin-top:12px">Anything else <span class="muted">(optional)</span></div>
         ${chips('extra', EXTRAS)}
         <textarea data-ai="extra" data-fid="ai-extra" rows="2" style="min-height:0" placeholder="Or type it: mobility needs, a birthday dinner, must-sees" aria-label="Anything else">${esc(a.extra)}</textarea>
+        ${t.itinerary.some(x => x.title) ? `<div class="chip-h" style="margin-top:12px">Your current itinerary <span class="muted">(${acts(t.itinerary.filter(x => x.title).length)})</span></div>
+        ${seg('current', [['draft','Use as a starting point'],['keep','Keep it exactly'],['fresh','Ignore it, start fresh']])}
+        <div class="small muted" style="margin-top:4px">${{ draft: 'The AI keeps fixed things like family visits and reservations, and can change the rest.', keep: 'The AI plans around every activity you already have. Options will be very similar.', fresh: 'Your current itinerary isn\'t sent. Flights you\'ve booked still are.' }[a.current || 'draft']}</div>` : ''}
         <div class="ai-checks">
           <label class="row small"><input type="checkbox" data-ai="hotels" data-fid="ai-hotels" ${a.hotels ? 'checked' : ''}> Suggest places to stay</label>
           <label class="row small"><input type="checkbox" data-ai="askFirst" data-fid="ai-ask" ${a.askFirst ? 'checked' : ''}> Let the AI ask me a few questions first</label>
@@ -1027,7 +1030,10 @@ function aiPrompt(t){
   if (segs.length) { L.push('', 'Already booked (plan around these):');
     segs.forEach(s => L.push(`- ${[s.mode, s.carrier, s.number].filter(Boolean).join(' ')}, ${s.from || '?'} to ${s.to || '?'}${s.depart ? ', departs ' + s.depart.replace('T', ' ') : ''}${s.arrive ? ', arrives ' + s.arrive.replace('T', ' ') : ''}`)); }
   const planned = t.itinerary.filter(x => x.title).sort((x, y) => ((x.date || '') + (x.time || '')).localeCompare((y.date || '') + (y.time || '')));
-  if (planned.length) { L.push('', 'Already planned (keep these):');
+  const mode = a.current || 'draft';
+  if (planned.length && mode !== 'fresh') {
+    L.push('', mode === 'keep' ? 'Already planned (keep these exactly and plan around them):'
+      : 'My rough plan so far (use it as a starting point: keep the fixed commitments like family visits, reservations and the flights, but feel free to change, move or replace anything else, and make each option genuinely different):');
     planned.forEach(x => L.push(`- ${[x.date, x.time, x.title].filter(Boolean).join(' ')}${x.place ? ' at ' + x.place : ''}`)); }
   if (t.notes) L.push('', `Notes: ${t.notes}`);
   if (a.extra) L.push(`Also: ${a.extra}`);
