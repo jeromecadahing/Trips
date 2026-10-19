@@ -259,6 +259,19 @@ details.peek textarea{margin-top:8px;min-height:140px;font-size:.78rem}
 a.plain{color:inherit;text-decoration:none;border-bottom:1px dotted var(--line-2)}
 a.plain:hover{color:var(--accent);border-bottom-color:var(--accent)}
 @media (prefers-reduced-motion:reduce){.opt:hover{transform:none}}
+.ai-seg{flex-wrap:wrap}
+.ai-checks{display:grid;gap:6px;margin-top:10px}
+.ai-checks label{gap:7px;flex-wrap:nowrap;color:var(--ink)}
+.bverdict{margin-top:8px}
+.bverdict .small.muted{margin-top:3px;line-height:1.4}
+.stays{margin:0 0 12px;padding-top:10px;border-top:1px solid var(--line)}
+.stays-h{font-size:.74rem;color:var(--muted);margin-bottom:4px}
+.stay{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:6px 0;font-size:.82rem}
+.stay+.stay{border-top:1px dashed var(--line)}
+.stay a{font-weight:600;text-decoration:none}
+.stay a:hover{text-decoration:underline}
+.stay button{flex:none}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -378,7 +391,7 @@ function tripDefaults(t){
   t.costs ||= []; t.segments ||= []; t.itinerary ||= []; t.id ||= uid(); t.fund ||= 'save';
   t.card = Object.assign({ name: '', apr: 22, promo: 0, payment: 300, when: 'now' }, t.card || {});
   t.drafts ||= []; t.linkItin ??= false;
-  t.ai = Object.assign({ linkOnUse: true, options: '2', pace: 'Balanced', interests: '', extra: '', paste: '', replace: false, open: false }, t.ai || {});
+  t.ai = Object.assign({ style: 'Mid-range', budget: '', hotels: true, askFirst: true, linkOnUse: true, options: '2', pace: 'Balanced', interests: '', extra: '', paste: '', replace: false, open: false }, t.ai || {});
   return t;
 }
 let state = load();
@@ -788,6 +801,26 @@ function photoTile(t, h, big){
   const q = cleanSight(h.title), src = photoCache[photoKey(t, q)];
   return `<a class="ph${big ? ' big' : ''}${src ? ' has-img' : ''}" href="${mapsUrl(t, h)}" target="_blank" rel="noopener" data-q="${esc(q)}" data-hint="${esc(cityHint(t))}" ${src ? `style="background-image:url('${esc(src)}')"` : ''}><span>${esc(h.title)}</span></a>`;
 }
+const tripNights = t => { const a = parseD(t.start), b = parseD(t.end); return a && b ? Math.max(0, Math.round((b - a) / 864e5)) : 0; };
+const VERDICT = { 'Realistic': 'ok', 'Tight': 'warn', 'Not possible': 'bad' };
+function budgetLine(bg){
+  if (!bg) return '';
+  return `<div class="bverdict"><span class="pill ${VERDICT[bg.verdict] || 'ok'}">${bg.verdict === 'Realistic' ? 'Budget works' : bg.verdict === 'Tight' ? 'Budget is tight' : 'Budget not possible'}</span>${bg.total !== '' ? ` <span class="small">Suggested ${money(num(bg.total))}</span>` : ''}${bg.note ? `<div class="small muted">${esc(bg.note)}</div>` : ''}</div>`;
+}
+function staysList(t, stays, src){
+  if (!stays?.length) return '';
+  const nights = tripNights(t);
+  return `<div class="stays"><div class="stays-h">Where to stay</div>${stays.map((h, i) => `<div class="stay">
+    <div style="min-width:0"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([h.name, h.area, cityHint(t)].filter(Boolean).join(', '))}" target="_blank" rel="noopener">${esc(h.name)}</a>
+      <div class="small muted">${[h.area, h.price !== '' ? `${money(num(h.price))} a night${nights ? `, ${money(num(h.price) * nights)} total` : ''}` : ''].filter(Boolean).map(esc).join(', ')}</div>
+      ${h.note ? `<div class="small muted">${esc(h.note)}</div>` : ''}</div>
+    <button class="small-btn" data-act="add-stay" data-src="${src}" data-i="${i}" title="Add to Costs">+ Costs</button></div>`).join('')}</div>`;
+}
+function adviceBox(t){
+  const v = t.advice; if (!v || (!v.budget && !v.stays?.length)) return '';
+  return `<section class="panel" style="margin-top:14px"><div class="spread" style="margin-bottom:8px"><h2 style="margin:0">From your AI plan</h2><button class="ghost small-btn" data-act="dismiss-advice">Hide</button></div>
+    ${budgetLine(v.budget)}${staysList(t, v.stays, 'advice')}</section>`;
+}
 function comparePanel(t){
   const D = t.drafts; if (!D.length) return '';
   const S = D.map(d => draftStats(d, D.filter(o => o !== d)));
@@ -799,7 +832,12 @@ function comparePanel(t){
     win(s => s.food / Math.max(1, s.n), 'Foodie pick'); win(s => s.sights, 'Most sightseeing');
   }
   const dates = [...new Set(D.flatMap(d => d.items.map(x => x.date)))].sort();
-  const summary = compareSummary(D, S);
+  let summary = compareSummary(D, S);
+  const bud = num(t.ai.budget);
+  if (bud > 0 && D.length > 1) { const fit = D.map((d, i) => [d, i]).filter(([d, i]) => S[i].cost <= bud && d.budget?.verdict !== 'Not possible');
+    summary += fit.length === D.length ? ` All of them fit your ${money(bud)} budget.` : fit.length ? ` Only ${fit.map(([d, i]) => 'Option ' + optNum(d, i)).join(' and ')} fit${fit.length === 1 ? 's' : ''} your ${money(bud)} budget.` : ` None of them fit your ${money(bud)} budget. Check the budget notes on each card.`; }
+  const imp = D.map((d, i) => [d, i]).filter(([d]) => d.budget?.verdict === 'Not possible');
+  if (imp.length) summary += ` The AI says ${imp.map(([d, i]) => 'Option ' + optNum(d, i)).join(' and ')} can't be done on your budget.`;
   const cards = D.map((d, i) => { const s = S[i], hl = s.highlights.slice(0, 3);
     return `<article class="opt">
       <div class="opt-photos">${hl.length ? hl.map((h, k) => photoTile(t, h, k === 0)).join('') : `<div class="ph big"><span>${esc(optShort(d))}</span></div>`}</div>
@@ -807,6 +845,8 @@ function comparePanel(t){
         <div class="opt-no">Option ${optNum(d, i)}</div>
         <h3 class="opt-title">${esc(optShort(d))}</h3>
         ${badges[i].length ? `<div class="row" style="gap:4px;margin-top:6px">${badges[i].map(b => `<span class="pill ok">${b}</span>`).join('')}</div>` : ''}
+        ${budgetLine(d.budget)}
+        ${num(t.ai.budget) > 0 && s.cost > num(t.ai.budget) ? `<div class="small" style="color:var(--danger);margin-top:6px">Activities and food alone are ${money(s.cost - num(t.ai.budget))} over your ${money(num(t.ai.budget))} budget</div>` : ''}
         <dl class="opt-stats">
           <div><dt>Spend</dt><dd>${money(s.cost)}</dd></div>
           <div><dt>Per day</dt><dd>${s.perDay.toFixed(1)}</dd></div>
@@ -814,6 +854,7 @@ function comparePanel(t){
           <div><dt>Starts</dt><dd>${s.start != null ? fmtMin(s.start) : '—'}</dd></div>
         </dl>
         ${hl.length ? `<p class="opt-hl"><span class="muted">Highlights:</span> ${s.highlights.slice(0, 4).map(h => `<a href="${mapsUrl(t, h)}" target="_blank" rel="noopener">${esc(h.title)}</a>`).join(', ')}</p>` : ''}
+        ${staysList(t, d.stays, d.id)}
         <div class="row opt-actions"><button class="primary" data-act="use-draft" data-id="${d.id}">Use this plan</button><button class="ghost" data-act="del-draft" data-id="${d.id}" aria-label="Delete ${esc(d.name)}">Remove</button></div>
       </div></article>`; }).join('');
   const cell = x => { const g = GENERIC.test(x.title || '');
@@ -865,12 +906,19 @@ function tabItinerary(t){
       ${items.length ? items.map(actRow).join('') : '<p class="small muted" style="padding:10px 0;margin:0">Nothing planned yet.</p>'}</div>`;
   }).join('');
   const it$ = itinTotal(t);
-  return aiPanel(t) + comparePanel(t) + `<section class="panel" id="itinerary" style="margin-top:18px">
+  return aiPanel(t) + comparePanel(t) + adviceBox(t) + `<section class="panel" id="itinerary" style="margin-top:18px">
     <div class="spread"><div><h2 style="margin:0">Itinerary</h2>${it$ > 0 ? `<span class="small muted">${money(it$)} in activity costs, ${t.linkItin ? 'counted in the trip total' : '<a href="#/trip/' + t.id + '/costs">not yet counted in the trip total</a>'}</span>` : ''}</div>
       <div class="row">${t.itinerary.length ? `<button class="danger" data-act="clear-itin">Clear itinerary</button>` : ''}<button class="primary" data-act="add-act" data-date="${esc(t.start || '')}">Add activity</button></div></div>
     ${body || '<p class="muted" style="margin-top:12px">Set your trip dates, or add an activity.</p>'}
   </section>`;
 }
+const STYLES = {
+  'Bare minimum': 'Spend as little as possible: free sights and walks, supermarket and street food, hostels or the cheapest clean rooms.',
+  'Budget': 'Keep costs low but comfortable: a few paid highlights, casual local food, simple guesthouses or 2-star hotels.',
+  'Mid-range': 'A balance of value and comfort: main sights, good local restaurants, 3-star hotels.',
+  'Foodie': 'Spend more on eating: markets, tastings, a standout dinner or two, with sights fitted around meals. Mid-range hotels.',
+  'Comfort': 'Comfort first: skip-the-line tickets, nicer restaurants, taxis when useful, 4-star hotels.'
+};
 function aiPanel(t){
   const a = t.ai, many = num(a.options) > 1;
   const seg = (k, opts) => `<div class="seg ai-seg" role="group">${opts.map(([v, l]) => `<button type="button" data-act="ai-set" data-k="${k}" data-v="${v}" aria-pressed="${String(a[k]) === v}">${l}</button>`).join('')}</div>`;
@@ -888,13 +936,21 @@ function aiPanel(t){
         <div class="ai-opts">
           <span class="ai-lbl">Pace</span>${seg('pace', [['Relaxed','Relaxed'],['Balanced','Balanced'],['Packed','Packed']])}
           <span class="ai-lbl">Plans</span>${seg('options', [['1','1 plan'],['2','2 to compare'],['3','3 to compare']])}
+          <span class="ai-lbl">Style</span>${seg('style', Object.keys(STYLES).map(k => [k, k]))}
+          <span></span><span class="small muted" style="margin-top:-2px">${STYLES[a.style] || ''}</span>
+          <span class="ai-lbl">Budget</span><div class="row" style="gap:8px;flex-wrap:nowrap"><input type="number" min="0" step="50" data-ai="budget" data-fid="ai-budget" value="${esc(a.budget)}" placeholder="Leave blank for a suggestion" aria-label="Budget for the trip, not counting flights" style="max-width:220px"><span class="small muted">${esc(state.settings.currency)}, not counting flights</span></div>
         </div>
+
         <input data-ai="interests" data-fid="ai-int" value="${esc(a.interests)}" placeholder="Interests, such as food, museums, hiking" aria-label="Interests">
         <textarea data-ai="extra" data-fid="ai-extra" rows="2" style="min-height:0;margin-top:8px" placeholder="Anything else (optional): a rest day, mobility needs, must-sees" aria-label="Anything else">${esc(a.extra)}</textarea>
+        <div class="ai-checks">
+          <label class="row small"><input type="checkbox" data-ai="hotels" data-fid="ai-hotels" ${a.hotels ? 'checked' : ''}> Suggest places to stay</label>
+          <label class="row small"><input type="checkbox" data-ai="askFirst" data-fid="ai-ask" ${a.askFirst ? 'checked' : ''}> Let the AI ask me a few questions first</label>
+        </div>
       </li>
       <li>
         <h3>Copy your request into a chat</h3>
-        <p class="small muted">Your dates, bookings, budget and existing plans go with it. Paste it into the chat and send.</p>
+        <p class="small muted">Your dates, bookings, budget and existing plans go with it. Paste it into the chat and send.${a.askFirst ? ' Answer its questions, and it will then write the plan.' : ''}</p>
         <div class="row">
           <button class="primary" data-act="ai-copy" data-open="https://claude.ai/new">Copy and open Claude</button>
           <button data-act="ai-copy" data-open="https://chatgpt.com/">Copy and open ChatGPT</button>
@@ -905,23 +961,24 @@ function aiPanel(t){
         <h3>Paste the reply here</h3>
         <textarea data-ai="paste" data-fid="ai-paste" style="min-height:110px" aria-label="AI reply" placeholder="Paste the whole reply. Lines look like: ${esc((t.start || '2027-04-04') + ' | 09:00 | Morning walk | Old town')}">${esc(a.paste)}</textarea>
         <div class="row" style="margin-top:8px">${many ? compareBtn + addBtn : addBtn + compareBtn}</div>
-        <p class="small muted" style="margin:10px 0 0">AI can be out of date. Check opening hours, prices and booking needs before you go.</p>
+        <p class="small muted" style="margin:10px 0 0">The budget check and hotel suggestions come in with the plan. AI can be out of date. Check opening hours, prices and booking needs before you go.</p>
       </li>
     </ol>
   </details>`;
 }
 function aiPrompt(t){
-  const a = t.ai, sd = parseD(t.start), ed = parseD(t.end);
-  const days = sd && ed ? Math.round((ed - sd) / 864e5) + 1 : null;
-  const byCat = k => sum(t.costs.filter(x => x.category === k), itemValue);
+  const a = t.ai, sd = parseD(t.start), ed = parseD(t.end), cur = state.settings.currency;
+  const days = sd && ed ? Math.round((ed - sd) / 864e5) + 1 : null, nights = days ? days - 1 : null, trav = num(t.travelers) || 1;
   const L = ['Please help me plan a day-by-day itinerary for a trip.', ''];
   L.push(`Trip: ${t.name || 'Untitled'}`, `Travelling from ${t.origin || '?'} to ${t.destination || '?'}`,
-    `Dates: ${t.start || '?'} to ${t.end || '?'}${days ? ` (${days} days)` : ''}`, `Travelers: ${num(t.travelers) || 1}`, `Pace: ${a.pace}`);
+    `Dates: ${t.start || '?'} to ${t.end || '?'}${days ? ` (${days} days, ${nights} nights)` : ''}`, `Travelers: ${trav}`, `Pace: ${a.pace}`,
+    `Travel style: ${a.style}. ${STYLES[a.style] || ''}`);
   if (a.interests) L.push(`Interests: ${a.interests}`);
-  const act = byCat('Activities'), food = byCat('Food');
-  if (act || food) L.push(`Budget: about ${money(act)} for activities and ${money(food)} for food, for the whole trip`);
   const stay = t.costs.filter(x => x.category === 'Lodging' && x.label).map(x => x.label);
-  if (stay.length) L.push(`Staying at: ${stay.join('; ')}`);
+  const wantHotels = a.hotels;
+  if (num(a.budget) > 0) L.push(`Budget: ${money(num(a.budget))} (${cur}) for the whole trip for all ${trav} traveler(s), not counting flights. ${stay.length ? 'My stay is already booked and paid for separately, so this covers activities, food and getting around.' : wantHotels ? 'It needs to cover accommodation too.' : ''}`);
+  else L.push(`Budget: I haven't set one. Suggest a realistic total for this style, not counting flights${wantHotels && !stay.length ? ' but including accommodation' : ''}.`);
+  if (stay.length) L.push(`Staying at (already booked): ${stay.join('; ')}`);
   const segs = [...t.segments].sort((x, y) => (x.depart || '').localeCompare(y.depart || ''));
   if (segs.length) { L.push('', 'Already booked (plan around these):');
     segs.forEach(s => L.push(`- ${[s.mode, s.carrier, s.number].filter(Boolean).join(' ')}, ${s.from || '?'} to ${s.to || '?'}${s.depart ? ', departs ' + s.depart.replace('T', ' ') : ''}${s.arrive ? ', arrives ' + s.arrive.replace('T', ' ') : ''}`)); }
@@ -930,14 +987,20 @@ function aiPrompt(t){
     planned.forEach(x => L.push(`- ${[x.date, x.time, x.title].filter(Boolean).join(' ')}${x.place ? ' at ' + x.place : ''}`)); }
   if (t.notes) L.push('', `Notes: ${t.notes}`);
   if (a.extra) L.push(`Also: ${a.extra}`);
+  if (a.askFirst) L.push('', 'BEFORE YOU PLAN: ask me up to 5 short questions that would change the plan (for example food likes and dislikes, must-sees, how much walking, type of place to stay, how we\'ll get around). Number them and keep them quick to answer. Then wait for my answers and only write the plan after I reply, using the format below.');
   const n = Math.max(1, num(a.options) || 1);
-  if (n > 1) L.push('', `Give me ${n} different itinerary options, each with a different feel (for example one more relaxed and one built around food and neighbourhoods).`,
+  L.push('', 'BUDGET CHECK: be honest about whether the budget works for this style and destination. If it is not possible, say so plainly, give the lowest realistic total and what would have to change (cheaper style, fewer days, different area), and plan the closest workable version.');
+  if (n > 1) L.push('', `Give me ${n} different itinerary options, each with a different feel (for example one more relaxed and one built around food and neighbourhoods), all within the same travel style.`,
     'Start each option with its own line in this form: Option 1: short title',
-    "Under that line, put that option's full itinerary in its own code block, one activity per line, in exactly this format:");
-  else L.push('', 'Reply with the full itinerary inside one code block, one activity per line, in exactly this format:');
-  L.push('YYYY-MM-DD | HH:MM | Activity | Place | Type | Cost | Short note',
-    `Type is one of: ${ITYPES.join(', ')}. Cost is your best estimate of the total for all ${num(t.travelers) || 1} traveler(s) in ${state.settings.currency}, as a plain number with no symbol (0 if free). Don't include the flights, trains or hotels I've already booked.`,
-    `Only use dates from ${t.start || 'the start date'} to ${t.end || 'the end date'}. Allow time for getting between places, meals and jet lag. After the code block, add up to five short tips.`);
+    "Under that line, put that option's full plan in its own code block.");
+  else L.push('', 'Put the full plan inside one code block.');
+  L.push('', 'Inside each code block:',
+    `1. First line: BUDGET | Realistic, Tight or Not possible | your suggested total in ${cur} as a plain number | one short reason`);
+  if (wantHotels) L.push(`2. Then 2 or 3 places to stay${stay.length ? ' (alternatives to what I booked, in case I change)' : ''} that fit the style, one per line: STAY | Hotel or hostel name | Area | Price per night in ${cur} as a plain number | Why it suits us`);
+  L.push(`${wantHotels ? '3' : '2'}. Then one activity per line in exactly this format:`,
+    'YYYY-MM-DD | HH:MM | Activity | Place | Type | Cost | Short note',
+    `Type is one of: ${ITYPES.join(', ')}. Cost is your best estimate of the total for all ${trav} traveler(s) in ${cur}, as a plain number with no symbol (0 if free). Include meals with realistic prices for the style. Don't include flights, trains or hotels in the activity lines.`,
+    `Only use dates from ${t.start || 'the start date'} to ${t.end || 'the end date'}. Allow time for getting between places, meals and jet lag. After the code block${n > 1 ? 's' : ''}, add up to five short money-saving or practical tips.`);
   return L.join('\n');
 }
 const TYPE_MAP = { 'car rental': 'Car rental', 'rental car': 'Car rental', car: 'Car rental', fuel: 'Fuel', petrol: 'Fuel', gas: 'Fuel', food: 'Food', meal: 'Food', meals: 'Food', drinks: 'Food', dining: 'Food', activity: 'Activities', activities: 'Activities', sightseeing: 'Activities',
@@ -963,12 +1026,23 @@ function parseLine(line){
   if (it.cost !== '' && !it.category) it.category = 'Activities';
   return it;
 }
+function parseMeta(line){
+  const p = line.split('|').map(x => x.replace(/[*_]/g, '').trim()); if (p.at(-1) === '') p.pop();
+  const k = (p[0] || '').toUpperCase();
+  if (k === 'BUDGET' && p.length >= 2) { const v = (p[1] || '').toLowerCase();
+    return { kind: 'budget', v: { verdict: /not|impossible|unrealistic/.test(v) ? 'Not possible' : /tight|stretch/.test(v) ? 'Tight' : 'Realistic', total: parseCost(p[2]) ?? '', note: p.slice(3).join(' | ') } }; }
+  if ((k === 'STAY' || k === 'HOTEL') && p[1]) return { kind: 'stay', v: { name: p[1], area: p[2] || '', price: parseCost(p[3]) ?? '', note: p.slice(4).join(' | ') } };
+  return null;
+}
 function parseAIGroups(text){
   const groups = []; let cur = null;
   for (const raw of String(text).split(/\r?\n/)) {
     const line = raw.replace(/^[\s>*`#_|-]+/, '').replace(/[*`_\s]+$/, '');
     const h = !line.includes('|') && line.match(/^option\s*([0-9]+|[a-e])\b\s*[:.)\u2013\u2014-]*\s*(.*)$/i);
     if (h) { cur = { title: h[2].replace(/[*_]/g, '').trim(), items: [] }; groups.push(cur); continue; }
+    const meta = parseMeta(line);
+    if (meta) { if (!cur) { cur = { title: '', items: [] }; groups.push(cur); }
+      if (meta.kind === 'budget') cur.budget = meta.v; else (cur.stays ||= []).push(meta.v); continue; }
     const it = parseLine(line);
     if (it) { if (!cur) { cur = { title: '', items: [] }; groups.push(cur); } cur.items.push(it); }
   }
@@ -1311,6 +1385,14 @@ document.addEventListener('click', e => {
     if (t.fund === 'card') { Object.assign(t.card, { payment: s.monthly, apr: s.apr, promo: s.promo }); commit(); toast('Card plan updated'); }
     else { t.monthly = s.monthly; commit(); toast('Savings figures updated'); } }
   else if (act === 'fund' && t) { t.fund = b.dataset.v; t.sim = null; commit(); }
+  else if (act === 'add-stay' && t) {
+    const src = b.dataset.src === 'advice' ? t.advice : t.drafts.find(x => x.id === b.dataset.src);
+    const h = src?.stays?.[+b.dataset.i]; if (!h) return;
+    const nights = Math.max(1, tripNights(t) || 1), est = num(h.price) * nights;
+    t.costs.push({ id: uid(), category: 'Lodging', label: `${h.name}${h.area ? ', ' + h.area : ''}, ${plural(nights, 'night')}`, estimate: est || '', actual: '', paid: false });
+    commit(); toast(`${h.name} added to Costs${est ? ' at ' + money(est) : ''}`);
+  }
+  else if (act === 'dismiss-advice' && t) { t.advice = null; commit(); }
   else if (act === 'ai-set' && t) { t.ai[b.dataset.k] = b.dataset.v; commit(); }
   else if (act === 'ai-copy' && t) {
     const p = copyText(aiPrompt(t)); if (b.dataset.open) window.open(b.dataset.open, '_blank', 'noopener');
@@ -1320,7 +1402,7 @@ document.addEventListener('click', e => {
     const groups = parseAIGroups(t.ai.paste);
     if (!groups.length) return toast('No itinerary lines found. Paste the reply that uses the "date | time | activity" format.');
     if (b.dataset.to === 'drafts') {
-      groups.forEach(g => t.drafts.push({ id: uid(), name: `Option ${t.drafts.length + 1}${g.title ? ': ' + g.title : ''}`, items: g.items }));
+      groups.forEach(g => t.drafts.push({ id: uid(), name: `Option ${t.drafts.length + 1}${g.title ? ': ' + g.title : ''}`, items: g.items, budget: g.budget || null, stays: g.stays || [] }));
       t.ai.paste = ''; commit(); toast(`Saved ${plural(groups.length, 'option')} to compare`);
       document.getElementById('compare')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else {
@@ -1328,6 +1410,7 @@ document.addEventListener('click', e => {
       const key = x => (x.date + x.time + x.title).toLowerCase(), have = new Set(t.itinerary.map(key)); let n = 0;
       groups[0].items.forEach(x => { if (!have.has(key(x))) { t.itinerary.push(x); have.add(key(x)); n++; } });
       if (t.ai.linkOnUse && sum(groups[0].items, x => num(x.cost)) > 0) t.linkItin = true;
+      if (groups[0].budget || groups[0].stays) t.advice = { budget: groups[0].budget || null, stays: groups[0].stays || [] };
       t.ai.paste = ''; commit(); toast(`Added ${acts(n)}`);
     }
   }
@@ -1335,6 +1418,7 @@ document.addEventListener('click', e => {
     const d = t.drafts.find(x => x.id === b.dataset.id); if (!d) return;
     if (t.itinerary.length && !confirm(`Replace your current itinerary (${acts(t.itinerary.length)}) with "${d.name}"?`)) return;
     t.itinerary = d.items.map(x => ({ ...x, id: uid() })); editing = null;
+    if (d.budget || d.stays?.length) t.advice = { budget: d.budget || null, stays: d.stays || [] };
     const spend = sum(d.items, x => num(x.cost)); if (t.ai.linkOnUse && spend > 0) t.linkItin = true;
     commit(); toast(t.ai.linkOnUse && spend > 0 ? `Plan chosen. ${money(spend)} added to your costs.` : `Your itinerary is now "${d.name}"`);
     document.getElementById('itinerary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
