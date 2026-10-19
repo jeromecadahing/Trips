@@ -43,7 +43,8 @@
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:13.5px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+html{font-size:calc(16px * var(--scale,1.12))}
+body{background:var(--bg);color:var(--ink);font:calc(13.5px * var(--scale,1.12))/1.55 var(--body);-webkit-font-smoothing:antialiased}
 a{color:var(--accent);text-underline-offset:2px}
 h1,h2,h3{font-family:var(--display);line-height:1.25;margin:0;letter-spacing:-.005em}
 h1{font-size:1.35rem;font-weight:700}
@@ -51,10 +52,10 @@ h2{font-size:.98rem;font-weight:650;margin-bottom:12px}
 h3{font-size:.92rem;font-weight:600}
 p{margin:0 0 .6em}
 .muted{color:var(--muted)} .small{font-size:.8rem}
-.wrap{max-width:920px;margin:0 auto;padding:8px 20px 72px}
+.wrap{max-width:calc(920px * var(--scale,1.12));margin:0 auto;padding:8px 20px 72px}
 
 /* top bar */
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 20px;max-width:920px;margin:0 auto}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 20px;max-width:calc(920px * var(--scale,1.12));margin:0 auto}
 .brand{font-weight:700;font-size:.95rem;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:7px}
 .brand svg{width:17px;height:17px;color:var(--accent)}
 nav.main{display:flex;gap:2px;flex-wrap:wrap}
@@ -88,7 +89,7 @@ label.f{display:grid;gap:3px;font-size:.76rem;color:var(--muted);font-weight:500
 .cols{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 
 /* ticket: the one signature element, kept but quieter */
-.ticket{display:grid;grid-template-columns:1fr 170px;background:var(--paper);border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none;transition:border-color .15s;box-shadow:var(--shadow)}
+.ticket{display:grid;grid-template-columns:1fr calc(175px * var(--scale,1.12));background:var(--paper);border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none;transition:border-color .15s;box-shadow:var(--shadow)}
 .ticket:hover{border-color:var(--line-2)}
 .ticket:hover .route{color:var(--accent)}
 .tmain{padding:14px 18px;min-width:0}
@@ -187,6 +188,27 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.84rem}
 .act.editing{display:block;background:var(--bg);margin:6px 0;padding:12px;border-radius:8px;border-bottom:none}
 .day>p,.day .muted{font-size:.8rem}
 @media (max-width:560px){.act{grid-template-columns:56px 1fr auto auto;gap:8px}}
+/* display settings */
+:root:not(.dark)[data-bg="sand"]{--bg:#ECE6DC}
+:root:not(.dark)[data-bg="sky"]{--bg:#DFE7F1}
+:root:not(.dark)[data-bg="stone"]{--bg:#D3DAD7;--line:#C9D1CD}
+:root:not(.dark)[data-bg="white"]{--bg:#FFFFFF;--line:#D5DBD8;--shadow:none}
+:root:not(.dark)[data-contrast="high"]{--ink:#0B1117;--muted:#333C45;--line:#AEB8B3;--line-2:#86918C;--accent:#1D5A4E;--sun:#8F5C08;--danger:#962F1B}
+:root.dark[data-contrast="high"]{--ink:#FFFFFF;--muted:#C9D1D8;--line:#56636D;--line-2:#74828C;--accent:#7FD3C0;--sun:#F3C27A;--danger:#F29A86;--paper:#151B20;--bg:#000000}
+:root[data-contrast="high"] .tbl td input,:root[data-contrast="high"] .tbl td select{border-color:var(--line)}
+.top-right{display:flex;align-items:center;gap:6px;position:relative}
+.aa{font-weight:700;font-size:.9rem;padding:4px 9px;border-radius:6px;background:var(--paper)}
+.disp-pop{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:min(calc(340px * var(--scale,1.12)),calc(100vw - 32px));background:var(--paper);border:1px solid var(--line-2);border-radius:10px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.disp-pop[hidden]{display:none}
+.disp-row{margin-bottom:12px}
+.disp-row:last-child{margin-bottom:0}
+.disp-row>.lbl{display:block;font-size:.78rem;font-weight:600;margin-bottom:5px}
+.disp-row .seg{margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,auto));width:100%}
+.disp-row .seg button{justify-content:center;padding:6px 8px;white-space:nowrap}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatch{width:34px;height:34px;border-radius:50%;padding:0;border:2px solid var(--line-2);justify-content:center}
+.swatch[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--accent)}
+.disp-preview{font-size:.85rem;color:var(--muted);margin-top:4px}
 /* compare options */
 .tbl.compare th{white-space:normal;vertical-align:top;padding:8px 6px}
 .tbl.compare td{vertical-align:top;padding:8px 6px}
@@ -288,12 +310,16 @@ a.plain:hover{color:var(--accent);border-bottom-color:var(--accent)}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
     Trip Ledger
   </a>
+  <div class="top-right">
   <nav class="main" aria-label="Main">
     <a href="#/" data-nav="">Trips</a>
     <a href="#/plan" data-nav="plan">Savings plan</a>
     <a href="#/search" data-nav="search">Search flights</a>
     <a href="#/settings" data-nav="settings">Settings</a>
   </nav>
+  <button class="aa" data-act="disp-toggle" aria-expanded="false" aria-controls="dispPop" title="Text size and colours" aria-label="Text size and colours">Aa</button>
+  <div class="disp-pop" id="dispPop" hidden></div>
+  </div>
 </header>
 <main class="wrap" id="app"></main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -1333,7 +1359,8 @@ function updateLinks(){
 /* ---- settings ---- */
 function viewSettings(){
   return `<h1>Settings</h1>
-    <section class="panel" style="margin-top:20px"><h2>Currency</h2>
+    <section class="panel" style="margin-top:20px"><h2>Text and colours</h2><p class="small muted">Saved on this device. You can also change these any time with the Aa button at the top.</p>${displayControls()}</section>
+    <section class="panel" style="margin-top:18px"><h2>Currency</h2>
       <div class="form" style="max-width:300px"><label class="f">Show amounts in<select data-setting="currency" data-fid="set-cur">${CURRENCIES.map(c => `<option ${c === state.settings.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
       <p class="small muted" style="margin-top:8px">This changes the symbol only; amounts aren't converted.</p></section>
     <section class="panel" style="margin-top:18px"><h2>Your data</h2>
@@ -1342,6 +1369,36 @@ function viewSettings(){
     <section class="panel" style="margin-top:18px"><h2>Start over</h2>
       <div class="row"><button data-act="reset-sample">Replace with example trips</button><button class="danger" data-act="clear-all">Delete all trips</button></div></section>`;
 }
+
+/* ---- display settings (saved on this device only) ---- */
+const DKEY = 'tripledger.display';
+const SIZES = [['1','Small'],['1.12','Medium'],['1.25','Large'],['1.42','Extra large']];
+const BGS = [['sage','#E6EBE9','Sage'],['sand','#ECE6DC','Sand'],['sky','#DFE7F1','Sky'],['stone','#D3DAD7','Stone'],['white','#FFFFFF','White']];
+let disp = { scale: '1.12', theme: 'auto', contrast: 'standard', bg: 'sage' };
+try { Object.assign(disp, JSON.parse(localStorage.getItem(DKEY)) || {}); } catch (e) {}
+const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+function applyDisplay(){
+  const r = document.documentElement;
+  r.style.setProperty('--scale', disp.scale);
+  disp.theme === 'auto' ? r.removeAttribute('data-theme') : r.setAttribute('data-theme', disp.theme);
+  r.classList.toggle('dark', disp.theme === 'dark' || (disp.theme === 'auto' && darkMQ.matches));
+  r.setAttribute('data-contrast', disp.contrast); r.setAttribute('data-bg', disp.bg);
+  document.querySelectorAll('meta[name=theme-color]').forEach(m => m.remove());
+  const m = document.createElement('meta'); m.name = 'theme-color'; m.content = getComputedStyle(r).getPropertyValue('--bg').trim() || '#E6EBE9'; document.head.appendChild(m);
+}
+darkMQ.addEventListener?.('change', applyDisplay);
+function displayControls(){
+  const seg = (k, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button type="button" data-act="disp" data-k="${k}" data-v="${v}" aria-pressed="${disp[k] === v}">${l}</button>`).join('')}</div>`;
+  return `<div class="disp-row"><span class="lbl">Text size</span>${seg('scale', SIZES)}</div>
+    <div class="disp-row"><span class="lbl">Contrast</span>${seg('contrast', [['standard','Standard'],['high','High']])}</div>
+    <div class="disp-row"><span class="lbl">Light or dark</span>${seg('theme', [['auto','Auto'],['light','Light'],['dark','Dark']])}</div>
+    <div class="disp-row"><span class="lbl">Background${document.documentElement.classList.contains('dark') ? ' <span class="muted" style="font-weight:400">(light mode only)</span>' : ''}</span><div class="swatches">${BGS.map(([v, c, l]) => `<button type="button" class="swatch" data-act="disp" data-k="bg" data-v="${v}" aria-pressed="${disp.bg === v}" style="background:${c}" title="${l}" aria-label="${l} background"></button>`).join('')}</div></div>`;
+}
+function setDisplay(k, v){
+  disp[k] = v; try { localStorage.setItem(DKEY, JSON.stringify(disp)); } catch (e) {}
+  applyDisplay(); const pop = document.getElementById('dispPop'); if (!pop.hidden) pop.innerHTML = displayControls(); render();
+}
+applyDisplay();
 
 /* ============ events ============ */
 function commit(){ save(); render(); }
@@ -1411,6 +1468,8 @@ document.addEventListener('click', e => {
     commit(); toast(`${h.name} added to Costs${est ? ' at ' + money(est) : ''}`);
   }
   else if (act === 'dismiss-advice' && t) { t.advice = null; commit(); }
+  else if (act === 'disp-toggle') { const pop = document.getElementById('dispPop'); pop.hidden = !pop.hidden; b.setAttribute('aria-expanded', String(!pop.hidden)); if (!pop.hidden) pop.innerHTML = displayControls(); }
+  else if (act === 'disp') { setDisplay(b.dataset.k, b.dataset.v); }
   else if (act === 'ai-chip' && t) { t.ai[b.dataset.k] = toggleTag(t.ai[b.dataset.k], b.dataset.v); commit(); }
   else if (act === 'ai-set' && t) { t.ai[b.dataset.k] = b.dataset.v; commit(); }
   else if (act === 'ai-copy' && t) {
@@ -1476,6 +1535,9 @@ document.getElementById('importFile').addEventListener('change', async e => {
   e.target.value = '';
 });
 window.addEventListener('hashchange', () => { editing = null; render(); });
+document.addEventListener('click', e => { const pop = document.getElementById('dispPop');
+  if (!pop.hidden && !e.composedPath().some(n => n.id === 'dispPop' || n.dataset?.act === 'disp-toggle')) { pop.hidden = true; document.querySelector('.aa').setAttribute('aria-expanded', 'false'); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { const pop = document.getElementById('dispPop'); if (!pop.hidden) { pop.hidden = true; document.querySelector('.aa').focus(); } } });
 render();
 </script>
 <script>
