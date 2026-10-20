@@ -1,6 +1,6 @@
 // Trip Ledger: keeps the app working offline.
 // Always tries the network first, so new uploads show up straight away.
-const CACHE = 'trips-v1';
+const CACHE = 'trips-v2';
 const FILES = ['trips.html', 'manifest.json', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

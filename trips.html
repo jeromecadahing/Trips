@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trip Ledger</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧳</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%236FA8DC' transform='rotate(45 12 12)' d='M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z'/></svg>">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -57,7 +58,7 @@ p{margin:0 0 .6em}
 /* top bar */
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 20px;max-width:calc(920px * var(--scale,1.12));margin:0 auto}
 .brand{font-weight:700;font-size:.95rem;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:7px}
-.brand svg{width:17px;height:17px;color:var(--accent)}
+.brand svg{width:18px;height:18px;color:#6FA8DC}
 nav.main{display:flex;gap:2px;flex-wrap:wrap}
 nav.main a{color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:6px;font-weight:500;font-size:.85rem}
 nav.main a:hover{color:var(--ink)}
@@ -188,6 +189,25 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.84rem}
 .act.editing{display:block;background:var(--bg);margin:6px 0;padding:12px;border-radius:8px;border-bottom:none}
 .day>p,.day .muted{font-size:.8rem}
 @media (max-width:560px){.act{grid-template-columns:56px 1fr auto auto;gap:8px}}
+/* nav icons + phone tab bar */
+.nav-ic{display:none}
+.short-f{display:none}
+@media (max-width:640px){
+  .top{padding:12px 16px}
+  .wrap{padding:6px 14px calc(84px + env(safe-area-inset-bottom,0px))}
+  nav.main{position:fixed;left:0;right:0;bottom:0;z-index:15;display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--paper);border-top:1px solid var(--line-2);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));box-shadow:0 -2px 12px rgba(0,0,0,.06)}
+  nav.main a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:.7rem;border-radius:8px;text-align:center}
+  nav.main a[aria-current="page"]{box-shadow:none;background:var(--accent-soft);color:var(--accent)}
+  nav.main .nav-ic{display:block;width:22px;height:22px}
+  nav.main .long{display:none}
+  nav.main .short-f{display:inline}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .tabs{gap:14px;margin-right:-14px;padding-right:14px}
+  .act{grid-template-columns:5.6em 1fr auto auto;gap:8px}
+  .tbl td,.tbl td a{white-space:nowrap}
+  .act .time{white-space:nowrap}
+  h1{font-size:1.25rem}
+}
 /* display settings */
 :root:not(.dark)[data-bg="sand"]{--bg:#ECE6DC}
 :root:not(.dark)[data-bg="sky"]{--bg:#DFE7F1}
@@ -307,15 +327,15 @@ a.plain:hover{color:var(--accent);border-bottom-color:var(--accent)}
 <body>
 <header class="top">
   <a class="brand" href="#/">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path transform="rotate(45 12 12)" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
     Trip Ledger
   </a>
   <div class="top-right">
   <nav class="main" aria-label="Main">
-    <a href="#/" data-nav="">Trips</a>
-    <a href="#/plan" data-nav="plan">Savings plan</a>
-    <a href="#/search" data-nav="search">Search flights</a>
-    <a href="#/settings" data-nav="settings">Settings</a>
+    <a href="#/" data-nav=""><svg class="nav-ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path transform="rotate(45 12 12)" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg><span>Trips</span></a>
+    <a href="#/plan" data-nav="plan"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2"/></svg><span>Savings<span class="long"> plan</span></span></a>
+    <a href="#/search" data-nav="search"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span><span class="long">Search f</span><span class="short-f">F</span>lights</span></a>
+    <a href="#/settings" data-nav="settings"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>Settings</span></a>
   </nav>
   <button class="aa" data-act="disp-toggle" aria-expanded="false" aria-controls="dispPop" title="Text size and colours" aria-label="Text size and colours">Aa</button>
   <div class="disp-pop" id="dispPop" hidden></div>
