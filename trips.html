@@ -195,7 +195,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.84rem}
 @media (max-width:640px){
   .top{padding:12px 16px}
   .wrap{padding:6px 14px calc(84px + env(safe-area-inset-bottom,0px))}
-  nav.main{position:fixed;left:0;right:0;bottom:0;z-index:15;display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--paper);border-top:1px solid var(--line-2);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));box-shadow:0 -2px 12px rgba(0,0,0,.06)}
+  nav.main{position:fixed;left:0;right:0;bottom:0;z-index:15;display:grid;grid-template-columns:repeat(5,1fr);gap:0;background:var(--paper);border-top:1px solid var(--line-2);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));box-shadow:0 -2px 12px rgba(0,0,0,.06)}
   nav.main a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:.7rem;border-radius:8px;text-align:center}
   nav.main a[aria-current="page"]{box-shadow:none;background:var(--accent-soft);color:var(--accent)}
   nav.main .nav-ic{display:block;width:22px;height:22px}
@@ -208,12 +208,40 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.84rem}
   .act .time{white-space:nowrap}
   h1{font-size:1.25rem}
 }
+.sharebox{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.members{list-style:none;margin:0 0 8px;padding:0}
+.members li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;font-size:.85rem;border-bottom:1px dashed var(--line)}
 .sync-ind{display:inline-grid;place-items:center;width:32px;height:30px;border-radius:6px;color:var(--muted)}
 .sync-ind svg{width:20px;height:20px}
 .sync-ind.ok{color:var(--accent)}
 .sync-ind.busy{color:var(--sun)}
 .sync-ind.bad{color:var(--danger)}
 .sync-ind[hidden]{display:none}
+/* today */
+.daynav{margin-bottom:12px}
+.daynav .btn[aria-disabled="true"]{opacity:.4;pointer-events:none}
+.mapcard{padding:10px}
+.mapslot{height:clamp(240px,42vh,420px);border-radius:8px;overflow:hidden;background:var(--bg);position:relative}
+.map{width:100%;height:100%}
+.mapnote{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px}
+.pin{display:grid;place-items:center}
+.pin span{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#2C6E61;color:#fff;font:700 12px/1 var(--body);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.leaflet-container{font:inherit;font-size:.82rem}
+.leaflet-popup-content a{color:#2C6E61}
+.tlist{list-style:none;margin:0;padding:0}
+.tcard{display:grid;grid-template-columns:28px 1fr auto;gap:10px;padding:12px 0;border-top:1px solid var(--line);align-items:start}
+.tcard:first-child{border-top:none}
+.tcard.done{opacity:.55}
+.tcard.next{background:var(--accent-soft);margin:0 -10px;padding:12px 10px;border-radius:8px;border-top-color:transparent}
+.tnum{width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-weight:700;font-size:.75rem}
+.ttime{font-size:.8rem;color:var(--accent);font-weight:600}
+.ttitle{font-weight:650;line-height:1.3;margin:1px 0 2px}
+.tdist{color:var(--ink);font-weight:550;white-space:nowrap}
+.tlinks{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:.8rem;font-weight:550}
+.tlinks a{text-decoration:none}
+.tlinks a:hover{text-decoration:underline}
+.tph{width:84px;height:84px;border-radius:8px;flex:none}
+@media (max-width:640px){.tph{width:68px;height:68px}}
 /* display settings */
 :root:not(.dark)[data-bg="sand"]{--bg:#ECE6DC}
 :root:not(.dark)[data-bg="sky"]{--bg:#DFE7F1}
@@ -339,6 +367,7 @@ a.plain:hover{color:var(--accent);border-bottom-color:var(--accent)}
   <div class="top-right">
   <nav class="main" aria-label="Main">
     <a href="#/" data-nav=""><svg class="nav-ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path transform="rotate(45 12 12)" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg><span>Trips</span></a>
+    <a href="#/today" data-nav="today"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg><span>Today</span></a>
     <a href="#/plan" data-nav="plan"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2"/></svg><span>Savings<span class="long"> plan</span></span></a>
     <a href="#/search" data-nav="search"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span><span class="long">Search f</span><span class="short-f">F</span>lights</span></a>
     <a href="#/settings" data-nav="settings"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>Settings</span></a>
@@ -529,6 +558,7 @@ function render(){
     on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current');
   });
   if (view === 'trip') { const t = findTrip(id); app.innerHTML = t ? viewTrip(t, tab || 'overview') : viewMissing(); }
+  else if (view === 'today') app.innerHTML = viewToday(id, tab);
   else if (view === 'plan') app.innerHTML = viewPlan();
   else if (view === 'search') app.innerHTML = viewSearch();
   else if (view === 'settings') app.innerHTML = viewSettings();
@@ -536,6 +566,7 @@ function render(){
   if (view === 'trip' && tab === 'simulate') updateSim();
   if (view === 'search') updateLinks();
   if (view === 'trip' && tab === 'itinerary') loadPhotos();
+  if (view === 'today') afterToday(); else stopWatch();
   if (fid) { const n = app.querySelector(`[data-fid="${CSS.escape(fid)}"]`); if (n) n.focus(); }
 }
 const viewMissing = () => `<div class="empty"><h2>That trip isn't here</h2><p class="muted">It may have been deleted.</p><a class="btn" href="#/">Back to trips</a></div>`;
@@ -1435,13 +1466,152 @@ function setDisplay(k, v){
 }
 applyDisplay();
 
+/* ============ today: day view with map, location and photos ============ */
+const GEO_KEY = 'tripledger.geo';
+let geoCache = {}; try { geoCache = JSON.parse(localStorage.getItem(GEO_KEY)) || {}; } catch (e) {}
+let geoQueue = [], geoBusy = false, todayMap = null, mapEl = null, mapLayer = null, meMarker = null, meCircle = null, watchId = null, me = null, leafletP = null, todayCtx = null;
+const locWanted = () => localStorage.getItem('tripledger.loc') === 'on';
+function pickTodayTrip(){
+  const d = iso(today()), withDates = state.trips.filter(t => t.start && t.end);
+  const now = withDates.find(t => t.start <= d && d <= t.end);
+  if (now) return { t: now, date: d, live: true };
+  const next = withDates.filter(t => t.start > d).sort((a, b) => a.start.localeCompare(b.start))[0];
+  if (next) return { t: next, date: next.start, live: false };
+  const last = withDates.sort((a, b) => b.end.localeCompare(a.end))[0];
+  return last ? { t: last, date: last.start, live: false } : null;
+}
+const NOPLACE = /→|->|\bairport\b|^(los angeles|london|home|hotel)$/i;
+function geoQueries(t, x){
+  const city = cityHint(t), out = [], place = (x.place || '').trim();
+  if (place && !NOPLACE.test(place) && place.toLowerCase() !== city.toLowerCase()) out.push(place.includes(city) ? place : `${place}, ${city}`);
+  if (!GENERIC.test(x.title || '')) { const c = cleanSight(x.title || ''); if (c.length > 3) out.push(`${c}, ${city}`); }
+  return out.map(q => q.replace(/^,\s*|,\s*$/g, '')).filter(Boolean);
+}
+const geoGet = (t, x) => { for (const q of geoQueries(t, x)) { const v = geoCache[q.toLowerCase()]; if (v) return v; if (v === undefined) return undefined; } return null; };
+function geoNeed(t, items){ items.forEach(x => geoQueries(t, x).forEach(q => { const k = q.toLowerCase(); if (!(k in geoCache) && !geoQueue.includes(k)) geoQueue.push(k); })); runGeo(); }
+async function runGeo(){
+  if (geoBusy || !geoQueue.length) return; geoBusy = true;
+  while (geoQueue.length) {
+    const k = geoQueue.shift(); if (k in geoCache) continue;
+    try { const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(k), { headers: { 'Accept-Language': 'en' } });
+      const j = await r.json(); geoCache[k] = j[0] ? [+j[0].lat, +j[0].lon] : 0;
+      try { localStorage.setItem(GEO_KEY, JSON.stringify(geoCache)); } catch (e) {}
+    } catch (e) { geoBusy = false; return; }
+    if (route()[0] === 'today') drawMap();
+    await new Promise(r => setTimeout(r, 1100));
+  }
+  geoBusy = false; if (route()[0] === 'today') render();
+}
+const km = (a, b) => { const R = 6371, r = x => x * Math.PI / 180, dLa = r(b[0] - a[0]), dLo = r(b[1] - a[1]);
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+const fmtDist = d => d < 1 ? `${Math.round(d * 1000 / 10) * 10} m away` : `${d < 10 ? d.toFixed(1) : Math.round(d)} km away`;
+const dirUrl = (t, x, ll) => 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(ll ? ll.join(',') : [x.place || x.title, cityHint(t)].filter(Boolean).join(', '));
+function viewToday(tid, date){
+  const auto = pickTodayTrip();
+  if (!auto && !tid) return `<h1>Today</h1><div class="empty" style="margin-top:14px"><h2>No trips with dates yet</h2><p class="muted">Add leave and return dates to a trip and its days show up here.</p><a class="btn" href="#/">Your trips</a></div>`;
+  const t = (tid && findTrip(tid)) || auto.t, d = date || (t === auto?.t ? auto.date : t.start);
+  const live = d === iso(today());
+  const items = t.itinerary.filter(x => x.date === d && x.title).sort(byTime);
+  todayCtx = { t, d, items, live };
+  geoNeed(t, items);
+  const sd = parseD(t.start), ed = parseD(t.end), cur = parseD(d);
+  const n = sd && cur ? Math.round((cur - sd) / 864e5) + 1 : 1, total = sd && ed ? Math.round((ed - sd) / 864e5) + 1 : 1;
+  const prev = cur && sd && cur > sd ? iso(addDays(cur, -1)) : null, next = cur && ed && cur < ed ? iso(addDays(cur, 1)) : null;
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  let nextIdx = -1; if (live) nextIdx = items.findIndex(x => (minutes(x.time) ?? 0) >= nowMin - 30);
+  const tripsDated = state.trips.filter(x => x.start && x.end);
+  const pins = items.map(x => geoGet(t, x));
+  const spend = sum(items, x => num(x.cost));
+  const routeUrl = (() => { const pts = items.map((x, i) => pins[i] ? pins[i].join(',') : null).filter(Boolean); if (pts.length < 1) return '';
+    const dest = pts[pts.length - 1], way = pts.slice(0, -1).slice(0, 8); return `https://www.google.com/maps/dir/?api=1&destination=${dest}${way.length ? '&waypoints=' + encodeURIComponent(way.join('|')) : ''}`; })();
+  const card = (x, i) => { const ll = pins[i], g = GENERIC.test(x.title || ''), q = cleanSight(x.title || ''), src = g ? '' : photoCache[photoKey(t, q)];
+    const st = !live ? '' : i < nextIdx || nextIdx === -1 ? 'done' : i === nextIdx ? 'next' : '';
+    return `<li class="tcard ${st}">
+      <div class="tnum">${ll ? i + 1 : '•'}</div>
+      <div class="tbody">
+        <div class="ttime">${esc(fmtTime(x.time) || 'Any time')}${st === 'next' ? ' <span class="pill ok">Up next</span>' : st === 'done' ? ' <span class="small muted">Done</span>' : ''}</div>
+        <div class="ttitle">${esc(x.title)}</div>
+        <div class="small muted">${[x.place, num(x.cost) > 0 ? money(num(x.cost)) : ''].filter(Boolean).map(esc).join(', ')}${me && ll ? ` <span class="tdist">${fmtDist(km(me, ll))}</span>` : ''}</div>
+        ${x.note ? `<div class="small" style="margin-top:3px">${esc(x.note)}</div>` : ''}
+        <div class="tlinks"><a href="${dirUrl(t, x, ll)}" target="_blank" rel="noopener">Directions</a><a href="${mapsUrl(t, x)}" target="_blank" rel="noopener">Google Maps</a>${g ? '' : `<a href="https://www.google.com/search?q=${encodeURIComponent([x.title, x.place, cityHint(t)].filter(Boolean).join(' '))}" target="_blank" rel="noopener">More info</a>`}</div>
+      </div>
+      ${g ? '' : `<a class="ph tph${src ? ' has-img' : ''}" href="${mapsUrl(t, x)}" target="_blank" rel="noopener" data-q="${esc(q)}" data-hint="${esc(cityHint(t))}" ${src ? `style="background-image:url('${esc(src)}')"` : ''} aria-label="Photo of ${esc(x.title)}"></a>`}
+    </li>`; };
+  return `<div class="spread" style="margin:4px 0 10px"><div><h1>${live ? 'Today' : 'Day ' + n}</h1>
+      <div class="small muted">${esc(t.name || 'Trip')}: ${total > 1 ? `day ${n} of ${total}, ` : ''}${cur ? fmtDay(cur) : ''}</div></div>
+      ${tripsDated.length > 1 ? `<select data-today-trip aria-label="Trip" style="width:auto;max-width:200px">${tripsDated.map(x => `<option value="${x.id}" ${x === t ? 'selected' : ''}>${esc(x.name || 'Untitled')}</option>`).join('')}</select>` : ''}</div>
+    ${!live && auto && t === auto.t && !auto.live ? `<p class="note" style="margin-bottom:12px">${parseD(t.start) > today() ? `This trip starts in ${plural(Math.round((parseD(t.start) - today()) / 864e5), 'day')}. On the day, this page opens on today automatically.` : 'This trip has finished.'}</p>` : ''}
+    <div class="row daynav"><a class="btn" ${prev ? `href="#/today/${t.id}/${prev}"` : 'aria-disabled="true"'}>‹ Previous</a>${!live && iso(today()) >= (t.start || '') && iso(today()) <= (t.end || '') ? `<a class="btn" href="#/today/${t.id}/${iso(today())}">Today</a>` : ''}<a class="btn" ${next ? `href="#/today/${t.id}/${next}"` : 'aria-disabled="true"'}>Next ›</a></div>
+    <section class="panel mapcard">
+      <div id="todayMapSlot" class="mapslot"><div class="mapnote small muted">Loading map…</div></div>
+      <div class="row" style="margin-top:10px">
+        <button data-act="locate" class="${locWanted() ? 'primary' : ''}">${locWanted() ? (me ? 'Showing where you are' : 'Finding you…') : 'Show where I am'}</button>
+        ${routeUrl ? `<a class="btn" href="${routeUrl}" target="_blank" rel="noopener">Day's route in Google Maps</a>` : ''}
+      </div>
+      ${items.length && pins.every(v => v === null) ? `<p class="small muted" style="margin:8px 0 0">These activities don't have specific places, so there's nothing to pin on the map.</p>` : ''}
+    </section>
+    <section class="panel" style="margin-top:14px">
+      <div class="spread" style="margin-bottom:6px"><h2 style="margin:0">${acts(items.length).replace(/^\w/, c => c.toUpperCase())}</h2>${spend ? `<span class="small muted">About ${money(spend)} today</span>` : ''}</div>
+      ${items.length ? `<ol class="tlist">${items.map(card).join('')}</ol>` : `<p class="muted">Nothing planned for this day. <a href="#/trip/${t.id}/itinerary">Add activities</a></p>`}
+    </section>`;
+}
+function loadLeaflet(){
+  if (window.L) return Promise.resolve();
+  return leafletP ||= new Promise((res, rej) => {
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js').then(res, rej);
+  });
+}
+function afterToday(){
+  loadPhotos();
+  const slot = document.getElementById('todayMapSlot'); if (!slot) return;
+  if (mapEl) { slot.innerHTML = ''; slot.appendChild(mapEl); setTimeout(() => { todayMap?.invalidateSize(); drawMap(); }, 0); }
+  else loadLeaflet().then(() => {
+    const sl = document.getElementById('todayMapSlot'); if (!sl) return;
+    mapEl = document.createElement('div'); mapEl.className = 'map'; sl.innerHTML = ''; sl.appendChild(mapEl);
+    todayMap = L.map(mapEl, { zoomControl: true, attributionControl: true }).setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(todayMap);
+    mapLayer = L.layerGroup().addTo(todayMap); drawMap(true);
+  }).catch(() => { const sl = document.getElementById('todayMapSlot'); if (sl) sl.innerHTML = '<div class="mapnote small muted">The map couldn\'t load here. Use the Directions links below.</div>'; });
+  if (locWanted()) startWatch();
+}
+let lastFitKey = '';
+function drawMap(force){
+  if (!todayMap || !todayCtx) return;
+  const { t, items, d } = todayCtx; mapLayer.clearLayers(); const pts = [];
+  items.forEach((x, i) => { const ll = geoGet(t, x); if (!ll) return; pts.push(ll);
+    L.marker(ll, { icon: L.divIcon({ className: 'pin', html: `<span>${i + 1}</span>`, iconSize: [26, 26], iconAnchor: [13, 13] }) })
+      .bindPopup(`<b>${esc(fmtTime(x.time))} ${esc(x.title)}</b><br>${esc(x.place || '')}<br><a href="${dirUrl(t, x, ll)}" target="_blank" rel="noopener">Directions</a>`).addTo(mapLayer); });
+  if (pts.length > 1) L.polyline(pts, { color: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2C6E61', weight: 3, opacity: .55, dashArray: '6 6' }).addTo(mapLayer);
+  const key = d + ':' + pts.length;
+  if (force || key !== lastFitKey) { lastFitKey = key;
+    const all = me && locWanted() && pts.length && km(me, pts[0]) < 80 ? pts.concat([me]) : pts;
+    if (all.length > 1) todayMap.fitBounds(all, { padding: [30, 30], maxZoom: 15 }); else if (all.length === 1) todayMap.setView(all[0], 14);
+    else if (me) todayMap.setView(me, 13); }
+}
+function startWatch(){
+  if (watchId != null || !navigator.geolocation) return;
+  watchId = navigator.geolocation.watchPosition(p => {
+    const first = !me; me = [p.coords.latitude, p.coords.longitude];
+    if (todayMap) {
+      if (!meMarker) { meCircle = L.circle(me, { radius: p.coords.accuracy, color: '#3b82f6', weight: 1, fillOpacity: .12 }).addTo(todayMap);
+        meMarker = L.circleMarker(me, { radius: 7, color: '#fff', weight: 2, fillColor: '#3b82f6', fillOpacity: 1 }).bindPopup('You are here').addTo(todayMap); }
+      else { meMarker.setLatLng(me); meCircle.setLatLng(me).setRadius(p.coords.accuracy); }
+    }
+    if (first && route()[0] === 'today') { lastFitKey = ''; render(); }
+  }, err => { stopWatch(); localStorage.removeItem('tripledger.loc'); toast(err.code === 1 ? 'Location is blocked. Allow it for this site in your browser settings.' : 'Couldn\'t find your location'); if (route()[0] === 'today') render(); },
+  { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 });
+}
+function stopWatch(){ if (watchId != null) { navigator.geolocation.clearWatch(watchId); watchId = null; } }
+
 /* ============ cloud sync (Firebase) ============ */
 const SYNC_KEY = 'tripledger.sync';
 let syncMeta = {}; try { syncMeta = JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch (e) {}
 const saveSyncMeta = () => { try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncMeta)); } catch (e) {} };
 if (!syncMeta.device) { syncMeta.device = uid(); saveSyncMeta(); }
+if (syncMeta.uid && !syncMeta.docPath) { syncMeta.docPath = 'users/' + syncMeta.uid; saveSyncMeta(); }
 const sync = { status: 'off', user: null, error: '', remote: null, busy: false };
-const syncForm = { email: '', password: '' };
+const syncForm = { email: '', password: '', share: '' };
 let fbDoc = null, unsubSnap = null, pushTimer = null, applyingRemote = false;
 const FBV = '10.12.2';
 const cfgOk = c => c && c.apiKey && !/PASTE|YOUR/i.test(c.apiKey) && c.projectId;
@@ -1463,6 +1633,7 @@ function syncError(e){
     'auth/unauthorized-domain': `This site isn't allowed yet. In Firebase, go to Authentication → Settings → Authorized domains and add ${location.hostname}.`,
     'auth/operation-not-allowed': 'This sign-in method is switched off. In Firebase, go to Authentication → Sign-in method and enable it.',
     'auth/network-request-failed': 'No connection. Your changes are saved on this device and will sync later.',
+    'auth/too-many-requests': 'Too many tries. Wait a minute and try again.',
     'permission-denied': 'Firebase refused access. Check the Firestore rules match the ones in the setup steps.'
   };
   sync.error = c in map ? map[c] : (e && e.message) || 'Something went wrong with sync.';
@@ -1483,15 +1654,25 @@ async function onUser(u){
   sync.user = u; sync.busy = false; if (unsubSnap) { unsubSnap(); unsubSnap = null; } fbDoc = null;
   if (!u) { sync.status = 'signedout'; renderSync(); return; }
   sync.status = 'connecting'; sync.error = ''; renderSync();
-  fbDoc = firebase.firestore().collection('users').doc(u.uid);
+  const db = firebase.firestore(), myEmail = (u.email || '').toLowerCase();
+  let owner = u.uid; sync.sharedFrom = null; sync.members = [];
+  if (myEmail) { try { const sh = await db.collection('shares').doc(myEmail).get();
+    if (sh.exists && sh.data().owner && sh.data().owner !== u.uid) {
+      if (u.emailVerified) { owner = sh.data().owner; sync.sharedFrom = sh.data().ownerEmail || 'someone'; }
+      else sync.error = 'Trips have been shared with you. Verify your email address (button below) to open them.'; }
+  } catch (e) {} }
+  fbDoc = db.collection('users').doc(owner);
   try {
-    const snap = await fbDoc.get(); const r = snap.exists ? snap.data() : null;
+    let snap;
+    try { snap = await fbDoc.get(); }
+    catch (e) { if (owner !== u.uid) { sync.error = 'Couldn\'t open the shared trips. Ask the owner to share again, and check the Firestore rules.'; sync.sharedFrom = null; fbDoc = db.collection('users').doc(u.uid); snap = await fbDoc.get(); } else throw e; }
+    const r = snap.exists ? snap.data() : null;
     const remoteState = r && r.data ? JSON.parse(r.data) : null;
-    const newDevice = syncMeta.uid !== u.uid;
-    if (!r) { syncMeta.uid = u.uid; await pushNow(true); }
+    const newDevice = syncMeta.docPath !== fbDoc.path;
+    if (!r || !r.data) { syncMeta.docPath = fbDoc.path; await pushNow(true); }
     else if (newDevice) {
       const same = JSON.stringify(remoteState.trips) === JSON.stringify(state.trips);
-      if (same || !state.trips.length) { syncMeta.uid = u.uid; adoptRemote(r, false); }
+      if (same || !state.trips.length) { syncMeta.docPath = fbDoc.path; adoptRemote(r, false); }
       else { sync.status = 'choose'; sync.remote = r; renderSync(); return; }
     }
     else if ((r.updatedAt || 0) > (syncMeta.lastRemote || 0)) {
@@ -1508,7 +1689,8 @@ function startListening(){
   unsubSnap = fbDoc.onSnapshot(snap => {
     if (!snap.exists || snap.metadata.hasPendingWrites) return;
     const r = snap.data();
-    if ((r.updatedAt || 0) > (syncMeta.lastRemote || 0) && r.device !== syncMeta.device) { adoptRemote(r, true); }
+    const mem = JSON.stringify(r.members || []); if (mem !== JSON.stringify(sync.members || [])) { sync.members = r.members || []; renderSync(); }
+    if (r.data && (r.updatedAt || 0) > (syncMeta.lastRemote || 0) && r.device !== syncMeta.device) { adoptRemote(r, true); }
   }, syncError);
 }
 function adoptRemote(r, notify){
@@ -1524,7 +1706,7 @@ async function pushNow(quiet){
   const now = Date.now();
   try {
     sync.saving = true; renderSyncInd();
-    await fbDoc.set({ data: JSON.stringify(state), updatedAt: now, device: syncMeta.device });
+    await fbDoc.set({ data: JSON.stringify(state), updatedAt: now, device: syncMeta.device }, { merge: true });
     syncMeta.lastRemote = now; syncMeta.lastSynced = now; syncMeta.dirty = false; saveSyncMeta(); sync.error = '';
   } catch (e) { syncError(e); }
   sync.saving = false; renderSync();
@@ -1559,12 +1741,20 @@ function syncPanel(){
         <div class="panel" style="box-shadow:none"><h3>This device</h3><p class="small muted">${plural(state.trips.length, 'trip')}: ${esc(tripNames(state))}</p><button data-act="sync-keep-local">Use this device's trips</button></div>
         <div class="panel" style="box-shadow:none"><h3>Your account</h3><p class="small muted">${plural(rs.trips.length, 'trip')}, saved ${ago(sync.remote.updatedAt)}: ${esc(tripNames(rs))}</p><button class="primary" data-act="sync-keep-remote">Use my account's trips</button></div>
       </div><p class="small muted" style="margin-top:8px">The other set is replaced. Export a backup first if you want to keep a copy.</p>`; }
-  else body = `<p>Signed in as <b>${esc(u.email || u.displayName || 'you')}</b>.</p>
+  else { const unverified = u.email && !u.emailVerified;
+    const share = sync.sharedFrom
+      ? `<div class="sharebox"><b>Shared trips</b><p class="small" style="margin:4px 0 8px">You're seeing <b>${esc(sync.sharedFrom)}</b>'s trips. Anything either of you changes shows up for both.</p><button class="ghost small-btn" data-act="sync-leave">Stop using shared trips</button></div>`
+      : `<div class="sharebox"><b>Share your trips</b><p class="small muted" style="margin:4px 0 8px">They sign in to Trip Ledger with their own account and see the same trips as you, live.</p>
+        ${(sync.members || []).length ? `<ul class="members">${sync.members.map(m => `<li><span>${esc(m)}</span><button class="ghost small-btn" data-act="sync-unshare" data-email="${esc(m)}">Remove</button></li>`).join('')}</ul>` : ''}
+        <div class="row" style="flex-wrap:nowrap"><input type="email" data-sync="share" data-fid="sync-share" value="${esc(syncForm.share)}" placeholder="Their email, e.g. their Gmail" aria-label="Email to share with" style="max-width:280px"><button data-act="sync-share">Share</button></div></div>`;
+    body = `<p>Signed in as <b>${esc(u.email || u.displayName || 'you')}</b>.</p>
       <p class="small muted">${syncMeta.dirty || sync.saving ? 'Saving changes…' : `Everything synced${syncMeta.lastSynced ? ', ' + ago(syncMeta.lastSynced) : ''}.`} Changes on any signed-in device show up on the others within a few seconds.</p>
-      <div class="row" style="margin-top:10px"><button data-act="sync-now">Sync now</button><button class="ghost" data-act="sync-out">Sign out</button></div>`;
+      ${unverified ? `<p class="small" style="margin-top:8px">Your email isn't verified yet. Verify it so trips can be shared with you. <button class="small-btn" data-act="sync-verify">Send link</button> <button class="ghost small-btn" data-act="sync-recheck">I've verified</button></p>` : ''}
+      ${share}
+      <div class="row" style="margin-top:12px"><button data-act="sync-now">Sync now</button><button class="ghost" data-act="sync-out">Sign out</button></div>`; }
   return `<section class="panel" style="margin-top:18px"><h2>Sync between devices</h2>${body}${err}</section>`;
 }
-async function syncAction(act){
+async function syncAction(act, b){
   const auth = () => firebase.auth();
   sync.error = '';
   if (act === 'sync-google') { sync.busy = true; renderSync(); const pr = new firebase.auth.GoogleAuthProvider();
@@ -1580,10 +1770,30 @@ async function syncAction(act){
     try { await auth().sendPasswordResetEmail(syncForm.email.trim()); toast('Password reset email sent'); } catch (e) { syncError(e); } }
   else if (act === 'sync-out') { if (confirm('Sign out? Your trips stay on this device but stop syncing.')) { await auth().signOut(); } }
   else if (act === 'sync-now') { await pushNow(); toast('Synced'); }
+  else if (act === 'sync-share') {
+    const em = (syncForm.share || '').trim().toLowerCase(), me_ = (sync.user.email || '').toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { sync.error = 'Type the email address they sign in with.'; return renderSync(); }
+    if (em === me_) { sync.error = 'That\'s your own email.'; return renderSync(); }
+    try { const db = firebase.firestore();
+      await db.collection('shares').doc(em).set({ owner: sync.user.uid, ownerEmail: sync.user.email || '', at: Date.now() });
+      await fbDoc.set({ members: firebase.firestore.FieldValue.arrayUnion(em) }, { merge: true });
+      syncForm.share = ''; toast(`Shared with ${em}`); renderSync();
+    } catch (e) { e.code === 'permission-denied' ? (sync.error = 'Couldn\'t share. Make sure you published the new Firestore rules, and that this email isn\'t already linked to someone else\'s trips.', renderSync()) : syncError(e); } }
+  else if (act === 'sync-unshare') { const em = b.dataset.email;
+    if (!confirm(`Stop sharing your trips with ${em}? They keep nothing; their app goes back to their own trips.`)) return;
+    try { await fbDoc.update({ members: firebase.firestore.FieldValue.arrayRemove(em) }); await firebase.firestore().collection('shares').doc(em).delete().catch(() => {}); toast('Sharing stopped'); }
+    catch (e) { syncError(e); } }
+  else if (act === 'sync-leave') {
+    if (!confirm(`Stop using ${sync.sharedFrom}'s trips on this account? You'll go back to your own trips.`)) return;
+    try { await firebase.firestore().collection('shares').doc((sync.user.email || '').toLowerCase()).delete(); } catch (e) {}
+    syncMeta.docPath = ''; saveSyncMeta(); onUser(firebase.auth().currentUser); }
+  else if (act === 'sync-verify') { try { await sync.user.sendEmailVerification(); toast('Verification email sent. Open the link, then tap "I\'ve verified".'); } catch (e) { syncError(e); } }
+  else if (act === 'sync-recheck') { const cu = firebase.auth().currentUser; await cu.reload(); await cu.getIdToken(true); sync.error = ''; onUser(firebase.auth().currentUser); }
   else if (act === 'sync-retry') { location.reload(); }
-  else if (act === 'sync-keep-local') { syncMeta.uid = sync.user.uid; await pushNow(true); startListening(); toast('Your account now has this device\'s trips'); }
-  else if (act === 'sync-keep-remote') { syncMeta.uid = sync.user.uid; adoptRemote(sync.remote, false); sync.remote = null; startListening(); toast('Trips loaded from your account'); }
+  else if (act === 'sync-keep-local') { syncMeta.docPath = fbDoc.path; await pushNow(true); startListening(); toast('Your account now has this device\'s trips'); }
+  else if (act === 'sync-keep-remote') { syncMeta.docPath = fbDoc.path; adoptRemote(sync.remote, false); sync.remote = null; startListening(); toast('Trips loaded from your account'); }
 }
+document.addEventListener('change', e => { if (e.target.matches?.('[data-today-trip]')) location.hash = `#/today/${e.target.value}`; });
 document.addEventListener('input', e => { const k = e.target.dataset?.sync; if (k) syncForm[k] = e.target.value; });
 
 /* ============ events ============ */
@@ -1654,7 +1864,11 @@ document.addEventListener('click', e => {
     commit(); toast(`${h.name} added to Costs${est ? ' at ' + money(est) : ''}`);
   }
   else if (act === 'dismiss-advice' && t) { t.advice = null; commit(); }
-  else if (act.startsWith('sync-')) { syncAction(act); }
+  else if (act.startsWith('sync-')) { syncAction(act, b); }
+  else if (act === 'locate') {
+    if (locWanted()) { localStorage.removeItem('tripledger.loc'); stopWatch(); me = null; if (meMarker) { meMarker.remove(); meCircle.remove(); meMarker = meCircle = null; } render(); }
+    else { localStorage.setItem('tripledger.loc', 'on'); startWatch(); render(); }
+  }
   else if (act === 'disp-toggle') { const pop = document.getElementById('dispPop'); pop.hidden = !pop.hidden; b.setAttribute('aria-expanded', String(!pop.hidden)); if (!pop.hidden) pop.innerHTML = displayControls(); }
   else if (act === 'disp') { setDisplay(b.dataset.k, b.dataset.v); }
   else if (act === 'ai-chip' && t) { t.ai[b.dataset.k] = toggleTag(t.ai[b.dataset.k], b.dataset.v); commit(); }
