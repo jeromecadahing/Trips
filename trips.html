@@ -208,6 +208,12 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.84rem}
   .act .time{white-space:nowrap}
   h1{font-size:1.25rem}
 }
+.sync-ind{display:inline-grid;place-items:center;width:32px;height:30px;border-radius:6px;color:var(--muted)}
+.sync-ind svg{width:20px;height:20px}
+.sync-ind.ok{color:var(--accent)}
+.sync-ind.busy{color:var(--sun)}
+.sync-ind.bad{color:var(--danger)}
+.sync-ind[hidden]{display:none}
 /* display settings */
 :root:not(.dark)[data-bg="sand"]{--bg:#ECE6DC}
 :root:not(.dark)[data-bg="sky"]{--bg:#DFE7F1}
@@ -337,6 +343,7 @@ a.plain:hover{color:var(--accent);border-bottom-color:var(--accent)}
     <a href="#/search" data-nav="search"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span><span class="long">Search f</span><span class="short-f">F</span>lights</span></a>
     <a href="#/settings" data-nav="settings"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>Settings</span></a>
   </nav>
+  <a class="sync-ind" id="syncInd" href="#/settings" hidden aria-label="Sync status"></a>
   <button class="aa" data-act="disp-toggle" aria-expanded="false" aria-controls="dispPop" title="Text size and colours" aria-label="Text size and colours">Aa</button>
   <div class="disp-pop" id="dispPop" hidden></div>
   </div>
@@ -345,6 +352,7 @@ a.plain:hover{color:var(--accent);border-bottom-color:var(--accent)}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
+<script src="firebase-config.js"></script>
 <script>
 /* ============ helpers ============ */
 const KEY = 'tripledger.v1';
@@ -448,7 +456,7 @@ function tripDefaults(t){
   return t;
 }
 let state = load();
-function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} if (typeof markDirty === 'function') markDirty(); }
 const findTrip = id => state.trips.find(t => t.id === id);
 
 /* ============ calculations ============ */
@@ -1385,12 +1393,13 @@ function updateLinks(){
 /* ---- settings ---- */
 function viewSettings(){
   return `<h1>Settings</h1>
-    <section class="panel" style="margin-top:20px"><h2>Text and colours</h2><p class="small muted">Saved on this device. You can also change these any time with the Aa button at the top.</p>${displayControls()}</section>
+    ${syncPanel().replace('margin-top:18px', 'margin-top:20px')}
+    <section class="panel" style="margin-top:18px"><h2>Text and colours</h2><p class="small muted">Saved on this device. You can also change these any time with the Aa button at the top.</p>${displayControls()}</section>
     <section class="panel" style="margin-top:18px"><h2>Currency</h2>
       <div class="form" style="max-width:300px"><label class="f">Show amounts in<select data-setting="currency" data-fid="set-cur">${CURRENCIES.map(c => `<option ${c === state.settings.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
       <p class="small muted" style="margin-top:8px">This changes the symbol only; amounts aren't converted.</p></section>
     <section class="panel" style="margin-top:18px"><h2>Your data</h2>
-      <p class="muted" style="max-width:62ch">Trips are saved in this browser only. Export a backup to move them to another device or browser.</p>
+      <p class="muted" style="max-width:62ch">${sync.user ? 'Trips are saved on this device and in your account.' : 'Trips are saved in this browser only unless you turn on sync above.'} A backup file is a good extra copy.</p>
       <div class="row" style="margin-top:12px"><button class="primary" data-act="export">Export backup</button><button data-act="import">Import backup</button></div></section>
     <section class="panel" style="margin-top:18px"><h2>Start over</h2>
       <div class="row"><button data-act="reset-sample">Replace with example trips</button><button class="danger" data-act="clear-all">Delete all trips</button></div></section>`;
@@ -1425,6 +1434,157 @@ function setDisplay(k, v){
   applyDisplay(); const pop = document.getElementById('dispPop'); if (!pop.hidden) pop.innerHTML = displayControls(); render();
 }
 applyDisplay();
+
+/* ============ cloud sync (Firebase) ============ */
+const SYNC_KEY = 'tripledger.sync';
+let syncMeta = {}; try { syncMeta = JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch (e) {}
+const saveSyncMeta = () => { try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncMeta)); } catch (e) {} };
+if (!syncMeta.device) { syncMeta.device = uid(); saveSyncMeta(); }
+const sync = { status: 'off', user: null, error: '', remote: null, busy: false };
+const syncForm = { email: '', password: '' };
+let fbDoc = null, unsubSnap = null, pushTimer = null, applyingRemote = false;
+const FBV = '10.12.2';
+const cfgOk = c => c && c.apiKey && !/PASTE|YOUR/i.test(c.apiKey) && c.projectId;
+const loadScript = src => new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); });
+const tripNames = st => (st.trips || []).map(x => x.name || 'Untitled').join(', ');
+const ago = ms => { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : fmtDate(iso(new Date(ms))); };
+
+function markDirty(){
+  if (applyingRemote) return;
+  syncMeta.dirty = true; saveSyncMeta();
+  if (fbDoc && sync.status === 'on') { clearTimeout(pushTimer); pushTimer = setTimeout(pushNow, 1200); }
+}
+function syncError(e){
+  const c = e && e.code || '';
+  const map = {
+    'auth/invalid-credential': 'Email or password is wrong.', 'auth/wrong-password': 'Email or password is wrong.', 'auth/user-not-found': 'No account with that email. Use Create account.',
+    'auth/invalid-email': 'That email address doesn\'t look right.', 'auth/email-already-in-use': 'That email already has an account. Use Sign in.',
+    'auth/weak-password': 'Use a password of at least 6 characters.', 'auth/popup-closed-by-user': '', 'auth/cancelled-popup-request': '',
+    'auth/unauthorized-domain': `This site isn't allowed yet. In Firebase, go to Authentication → Settings → Authorized domains and add ${location.hostname}.`,
+    'auth/operation-not-allowed': 'This sign-in method is switched off. In Firebase, go to Authentication → Sign-in method and enable it.',
+    'auth/network-request-failed': 'No connection. Your changes are saved on this device and will sync later.',
+    'permission-denied': 'Firebase refused access. Check the Firestore rules match the ones in the setup steps.'
+  };
+  sync.error = c in map ? map[c] : (e && e.message) || 'Something went wrong with sync.';
+  sync.busy = false; renderSync();
+}
+async function initSync(){
+  if (!cfgOk(window.FIREBASE_CONFIG)) { sync.status = 'unconfigured'; renderSync(); return; }
+  sync.status = 'loading'; renderSync();
+  try {
+    for (const m of ['app', 'auth', 'firestore']) await loadScript(`https://www.gstatic.com/firebasejs/${FBV}/firebase-${m}-compat.js`);
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    try { await firebase.firestore().enablePersistence({ synchronizeTabs: true }); } catch (e) {}
+    firebase.auth().getRedirectResult().catch(syncError);
+    firebase.auth().onAuthStateChanged(onUser);
+  } catch (e) { sync.status = 'error'; sync.error = 'Couldn\'t reach Firebase. Check your connection and reload.'; renderSync(); }
+}
+async function onUser(u){
+  sync.user = u; sync.busy = false; if (unsubSnap) { unsubSnap(); unsubSnap = null; } fbDoc = null;
+  if (!u) { sync.status = 'signedout'; renderSync(); return; }
+  sync.status = 'connecting'; sync.error = ''; renderSync();
+  fbDoc = firebase.firestore().collection('users').doc(u.uid);
+  try {
+    const snap = await fbDoc.get(); const r = snap.exists ? snap.data() : null;
+    const remoteState = r && r.data ? JSON.parse(r.data) : null;
+    const newDevice = syncMeta.uid !== u.uid;
+    if (!r) { syncMeta.uid = u.uid; await pushNow(true); }
+    else if (newDevice) {
+      const same = JSON.stringify(remoteState.trips) === JSON.stringify(state.trips);
+      if (same || !state.trips.length) { syncMeta.uid = u.uid; adoptRemote(r, false); }
+      else { sync.status = 'choose'; sync.remote = r; renderSync(); return; }
+    }
+    else if ((r.updatedAt || 0) > (syncMeta.lastRemote || 0)) {
+      if (syncMeta.dirty) { sync.status = 'choose'; sync.remote = r; renderSync(); return; }
+      adoptRemote(r, false);
+    }
+    else if (syncMeta.dirty) await pushNow(true);
+    startListening();
+  } catch (e) { syncError(e); sync.status = 'on'; startListening(); }
+}
+function startListening(){
+  sync.status = 'on'; saveSyncMeta(); renderSync();
+  if (!fbDoc || unsubSnap) return;
+  unsubSnap = fbDoc.onSnapshot(snap => {
+    if (!snap.exists || snap.metadata.hasPendingWrites) return;
+    const r = snap.data();
+    if ((r.updatedAt || 0) > (syncMeta.lastRemote || 0) && r.device !== syncMeta.device) { adoptRemote(r, true); }
+  }, syncError);
+}
+function adoptRemote(r, notify){
+  try {
+    applyingRemote = true; state = normalize(JSON.parse(r.data));
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  } finally { applyingRemote = false; }
+  syncMeta.lastRemote = r.updatedAt || Date.now(); syncMeta.lastSynced = Date.now(); syncMeta.dirty = false; saveSyncMeta();
+  render(); if (notify) toast('Updated from your other device');
+}
+async function pushNow(quiet){
+  if (!fbDoc) return; clearTimeout(pushTimer);
+  const now = Date.now();
+  try {
+    sync.saving = true; renderSyncInd();
+    await fbDoc.set({ data: JSON.stringify(state), updatedAt: now, device: syncMeta.device });
+    syncMeta.lastRemote = now; syncMeta.lastSynced = now; syncMeta.dirty = false; saveSyncMeta(); sync.error = '';
+  } catch (e) { syncError(e); }
+  sync.saving = false; renderSync();
+}
+function renderSyncInd(){
+  const el = document.getElementById('syncInd'); if (!el) return;
+  const st = sync.status; el.hidden = st === 'off' || st === 'unconfigured';
+  const state_ = sync.error ? 'bad' : st === 'on' ? (sync.saving || syncMeta.dirty ? 'busy' : 'ok') : st === 'signedout' ? 'idle' : 'busy';
+  const label = { ok: 'Synced', busy: 'Syncing…', bad: 'Sync problem', idle: 'Not signed in' }[state_];
+  el.className = 'sync-ind ' + state_; el.title = label; el.setAttribute('aria-label', label);
+  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4.5 4.5 0 1 1 .9-8.9A6 6 0 0 1 19.5 11 3.5 3.5 0 0 1 18 18z"/>${state_ === 'ok' ? '<path d="m9.5 13.5 2 2 3.5-3.5"/>' : state_ === 'bad' ? '<path d="M12 11v3M12 16.5v.01"/>' : ''}</svg>`;
+}
+function renderSync(){ renderSyncInd(); if (route()[0] === 'settings') render(); }
+function syncPanel(){
+  const st = sync.status, u = sync.user;
+  const err = sync.error ? `<p class="note" style="border-left-color:var(--danger);color:var(--ink);margin-top:10px">${esc(sync.error)}</p>` : '';
+  let body = '';
+  if (st === 'off' || st === 'unconfigured') body = `<p class="small muted" style="max-width:62ch">Not set up yet. Add your Firebase settings to <b>firebase-config.js</b> in your GitHub repo, then reload this page.</p>`;
+  else if (st === 'loading' || st === 'connecting') body = `<p class="small muted">Connecting…</p>`;
+  else if (st === 'error') body = `<button data-act="sync-retry">Try again</button>`;
+  else if (!u) body = `<p class="small muted" style="max-width:62ch">Sign in with the same account on your phone and computer and your trips stay in sync.</p>
+      <button class="primary" data-act="sync-google" ${sync.busy ? 'disabled' : ''} style="margin-top:4px">Sign in with Google</button>
+      <div class="small muted" style="margin:14px 0 8px">Or use email and password</div>
+      <div class="form" style="max-width:420px">
+        <label class="f">Email<input type="email" autocomplete="email" data-sync="email" data-fid="sync-email" value="${esc(syncForm.email)}"></label>
+        <label class="f">Password<input type="password" autocomplete="current-password" data-sync="password" data-fid="sync-pass" value="${esc(syncForm.password)}"></label>
+      </div>
+      <div class="row" style="margin-top:10px"><button data-act="sync-email-in" ${sync.busy ? 'disabled' : ''}>Sign in</button><button data-act="sync-email-new" ${sync.busy ? 'disabled' : ''}>Create account</button><button class="ghost" data-act="sync-reset">Forgot password</button></div>`;
+  else if (st === 'choose') { const rs = JSON.parse(sync.remote.data);
+    body = `<p style="max-width:62ch">This device and your account have different trips. Which should both keep?</p>
+      <div class="cols" style="margin-top:10px">
+        <div class="panel" style="box-shadow:none"><h3>This device</h3><p class="small muted">${plural(state.trips.length, 'trip')}: ${esc(tripNames(state))}</p><button data-act="sync-keep-local">Use this device's trips</button></div>
+        <div class="panel" style="box-shadow:none"><h3>Your account</h3><p class="small muted">${plural(rs.trips.length, 'trip')}, saved ${ago(sync.remote.updatedAt)}: ${esc(tripNames(rs))}</p><button class="primary" data-act="sync-keep-remote">Use my account's trips</button></div>
+      </div><p class="small muted" style="margin-top:8px">The other set is replaced. Export a backup first if you want to keep a copy.</p>`; }
+  else body = `<p>Signed in as <b>${esc(u.email || u.displayName || 'you')}</b>.</p>
+      <p class="small muted">${syncMeta.dirty || sync.saving ? 'Saving changes…' : `Everything synced${syncMeta.lastSynced ? ', ' + ago(syncMeta.lastSynced) : ''}.`} Changes on any signed-in device show up on the others within a few seconds.</p>
+      <div class="row" style="margin-top:10px"><button data-act="sync-now">Sync now</button><button class="ghost" data-act="sync-out">Sign out</button></div>`;
+  return `<section class="panel" style="margin-top:18px"><h2>Sync between devices</h2>${body}${err}</section>`;
+}
+async function syncAction(act){
+  const auth = () => firebase.auth();
+  sync.error = '';
+  if (act === 'sync-google') { sync.busy = true; renderSync(); const pr = new firebase.auth.GoogleAuthProvider();
+    try { await auth().signInWithPopup(pr); } catch (e) {
+      if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'].includes(e.code)) return auth().signInWithRedirect(pr).catch(syncError);
+      syncError(e); } }
+  else if (act === 'sync-email-in' || act === 'sync-email-new') {
+    if (!syncForm.email || !syncForm.password) { sync.error = 'Enter your email and a password.'; return renderSync(); }
+    sync.busy = true; renderSync();
+    try { act === 'sync-email-in' ? await auth().signInWithEmailAndPassword(syncForm.email.trim(), syncForm.password) : await auth().createUserWithEmailAndPassword(syncForm.email.trim(), syncForm.password); syncForm.password = ''; }
+    catch (e) { syncError(e); } }
+  else if (act === 'sync-reset') { if (!syncForm.email) { sync.error = 'Type your email first, then tap Forgot password.'; return renderSync(); }
+    try { await auth().sendPasswordResetEmail(syncForm.email.trim()); toast('Password reset email sent'); } catch (e) { syncError(e); } }
+  else if (act === 'sync-out') { if (confirm('Sign out? Your trips stay on this device but stop syncing.')) { await auth().signOut(); } }
+  else if (act === 'sync-now') { await pushNow(); toast('Synced'); }
+  else if (act === 'sync-retry') { location.reload(); }
+  else if (act === 'sync-keep-local') { syncMeta.uid = sync.user.uid; await pushNow(true); startListening(); toast('Your account now has this device\'s trips'); }
+  else if (act === 'sync-keep-remote') { syncMeta.uid = sync.user.uid; adoptRemote(sync.remote, false); sync.remote = null; startListening(); toast('Trips loaded from your account'); }
+}
+document.addEventListener('input', e => { const k = e.target.dataset?.sync; if (k) syncForm[k] = e.target.value; });
 
 /* ============ events ============ */
 function commit(){ save(); render(); }
@@ -1494,6 +1654,7 @@ document.addEventListener('click', e => {
     commit(); toast(`${h.name} added to Costs${est ? ' at ' + money(est) : ''}`);
   }
   else if (act === 'dismiss-advice' && t) { t.advice = null; commit(); }
+  else if (act.startsWith('sync-')) { syncAction(act); }
   else if (act === 'disp-toggle') { const pop = document.getElementById('dispPop'); pop.hidden = !pop.hidden; b.setAttribute('aria-expanded', String(!pop.hidden)); if (!pop.hidden) pop.innerHTML = displayControls(); }
   else if (act === 'disp') { setDisplay(b.dataset.k, b.dataset.v); }
   else if (act === 'ai-chip' && t) { t.ai[b.dataset.k] = toggleTag(t.ai[b.dataset.k], b.dataset.v); commit(); }
@@ -1565,6 +1726,7 @@ document.addEventListener('click', e => { const pop = document.getElementById('d
   if (!pop.hidden && !e.composedPath().some(n => n.id === 'dispPop' || n.dataset?.act === 'disp-toggle')) { pop.hidden = true; document.querySelector('.aa').setAttribute('aria-expanded', 'false'); } });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { const pop = document.getElementById('dispPop'); if (!pop.hidden) { pop.hidden = true; document.querySelector('.aa').focus(); } } });
 render();
+initSync();
 </script>
 <script>
 /* offline support + home-screen install (only works where sw.js sits next to this file) */
